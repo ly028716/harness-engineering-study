@@ -114,97 +114,97 @@ cat research/resources.md
 
 ## 当前进度
 
-**阶段一：理解核心概念** ✅ 已完成
-- ✅ 项目结构创建
-- ✅ 学习计划制定
-- ✅ 资源汇总完成
-- ✅ 核心概念文档
-- ✅ OpenAI Harness Engineering 中文文档
-- ✅ Anthropic Harness Design 中文文档
-- ✅ Modern Harness 2026 综合指南
-- ✅ 现有项目分析（claude-code-harness、refact、agent-os）
-- ✅ 对比分析文档
-- ✅ 核心设计模式提炼
-- ✅ claude-code-harness 深度实现分析
-- ✅ refact 深度实现分析
-- ✅ agent-os 深度实现分析
+**阶段一：理解核心概念** ⏳ 未开始
+- ⏳ 项目结构创建
+- ⏳ 学习计划制定
+- ⏳ 资源汇总完成
+- ⏳ 核心概念文档
+- ⏳ OpenAI Harness Engineering 中文文档
+- ⏳ Anthropic Harness Design 中文文档
+- ⏳ Modern Harness 2026 综合指南
+- ⏳ 现有项目分析（claude-code-harness、refact、agent-os）
+- ⏳ 对比分析文档
+- ⏳ 核心设计模式提炼
+- ⏳ claude-code-harness 深度实现分析
+- ⏳ refact 深度实现分析
+- ⏳ agent-os 深度实现分析
 
-**阶段二：研究现有实践** ✅ 已完成
-- ✅ 分析 claude-code-harness 代码结构
-- ✅ 理解 TypeScript 核心引擎
-- ✅ 掌握守护规则系统
-- ✅ 学习三智能体架构
-- ✅ 分析 refact 项目（Rust 架构、工具系统、会话状态机）
-- ✅ 分析 agent-os 项目（标准驱动、命令系统、Profile 继承）
-- ✅ claude-code-harness 运行体验记录
+**阶段二：研究现有实践** ⏳ 未开始
+- ⏳ 分析 claude-code-harness 代码结构
+- ⏳ 理解 TypeScript 核心引擎
+- ⏳ 掌握守护规则系统
+- ⏳ 学习三智能体架构
+- ⏳ 分析 refact 项目（Rust 架构、工具系统、会话状态机）
+- ⏳ 分析 agent-os 项目（标准驱动、命令系统、Profile 继承）
+- ⏳ claude-code-harness 运行体验记录
 
-**阶段三：构建 MVP** 🚧 进行中
-- ✅ MVP 架构设计（design/mvp-architecture.md）
+**阶段三：构建 MVP** ⏳ 未开始
+- ⏳ MVP 架构设计（design/mvp-architecture.md）
   - 设计原则：轻量级、核心功能聚焦、明确决策规则、可观测性
   - 技术栈：Python 3.11+、JSON 文件、Click CLI、Anthropic SDK
   - 3 个核心技能：plan（计划管理）、work（任务执行）、review（代码审查）
   - 自动模式选择：1-2 任务 Solo、3+ 任务 Parallel
   - 明确的 Verdict 阈值：Critical 1 或 Major 2+ → REQUEST_CHANGES
-- ✅ MVP 实现 - Phase 1: 核心框架（harness-mvp/）
-  - ✅ 项目结构和配置（pyproject.toml）
-  - ✅ CLI 框架（Click）- `harness --version`, `harness plan create`
-  - ✅ 状态管理（StateManager）- JSON 持久化到 .harness/state.json
-  - ✅ Markdown 解析器（MarkdownParser）- 解析 Plans.md 格式
-  - ✅ 测试覆盖率 98%（19 个测试全部通过）
-  - ✅ 核心代码 98 行，零编译依赖
-- ✅ MVP 实现 - Phase 2: Plan 功能（harness-mvp/）
-  - ✅ 数据模型（Task, TaskStatus, Priority - dataclass + Enum）
-  - ✅ 任务存储（TaskStore - JSON 持久化）
-  - ✅ 历史记录（HistoryManager - 变更历史追踪）
-  - ✅ Planner Agent（PlanGenerator - 任务生成）
-  - ✅ CLI 命令扩展：
+- ⏳ MVP 实现 - Phase 1: 核心框架（harness-mvp/）
+  - ⏳ 项目结构和配置（pyproject.toml）
+  - ⏳ CLI 框架（Click）- `harness --version`, `harness plan create`
+  - ⏳ 状态管理（StateManager）- JSON 持久化到 .harness/state.json
+  - ⏳ Markdown 解析器（MarkdownParser）- 解析 Plans.md 格式
+  - ⏳ 测试覆盖率 98%（19 个测试全部通过）
+  - ⏳ 核心代码 98 行，零编译依赖
+- ⏳ MVP 实现 - Phase 2: Plan 功能（harness-mvp/）
+  - ⏳ 数据模型（Task, TaskStatus, Priority - dataclass + Enum）
+  - ⏳ 任务存储（TaskStore - JSON 持久化）
+  - ⏳ 历史记录（HistoryManager - 变更历史追踪）
+  - ⏳ Planner Agent（PlanGenerator - 任务生成）
+  - ⏳ CLI 命令扩展：
     - `harness plan list` - 列出所有任务
     - `harness plan show <id>` - 显示任务详情
     - `harness plan update <id> --status <status>` - 更新状态
     - `harness plan sync` - 同步 Plans.md 和状态
     - `harness plan add` - 交互式添加任务
     - `harness plan stats` - 进度统计
-  - ✅ 测试覆盖率 92%（81 个测试全部通过）
-- ✅ MVP 实现 - Phase 3: Work 功能（harness-mvp/）
-  - ✅ 执行引擎（ExecutionEngine - 172 行）
+  - ⏳ 测试覆盖率 92%（81 个测试全部通过）
+- ⏳ MVP 实现 - Phase 3: Work 功能（harness-mvp/）
+  - ⏳ 执行引擎（ExecutionEngine - 172 行）
     - Worker Agent 实现
-  - ✅ 执行模式（ExecutionMode 枚举）
+  - ⏳ 执行模式（ExecutionMode 枚举）
     - Solo 模式（1-2 任务）
     - Parallel 模式（3+ 任务）
-  - ✅ 自动模式选择（select_execution_mode）
-  - ✅ Git 集成（GitWorktreeManager - 131 行）
+  - ⏳ 自动模式选择（select_execution_mode）
+  - ⏳ Git 集成（GitWorktreeManager - 131 行）
     - 工作区隔离
     - 模拟模式支持
-  - ✅ CLI 命令扩展：
+  - ⏳ CLI 命令扩展：
     - `harness work solo <id>` - 单任务执行
     - `harness work parallel` - 并行执行
     - `harness work all [N|M-K]` - 执行所有/指定任务
     - `harness work status` - 执行状态
-  - ✅ 依赖关系处理（拓扑排序分批次）
-  - ✅ 执行结果记录（ExecutionResult）
-  - ✅ 测试覆盖率 80%（123 个测试全部通过）
-- ✅ MVP 实现 - Phase 4: Review 功能（harness-mvp/）
-  - ✅ Reviewer Agent（ReviewerAgent - 498 行）
+  - ⏳ 依赖关系处理（拓扑排序分批次）
+  - ⏳ 执行结果记录（ExecutionResult）
+  - ⏳ 测试覆盖率 80%（123 个测试全部通过）
+- ⏳ MVP 实现 - Phase 4: Review 功能（harness-mvp/）
+  - ⏳ Reviewer Agent（ReviewerAgent - 498 行）
     - 5 观点审查实现
-  - ✅ 安全检查（Security）
+  - ⏳ 安全检查（Security）
     - SQL 注入、XSS、硬编码密钥、eval 使用
-  - ✅ 性能检查（Performance）
+  - ⏳ 性能检查（Performance）
     - N+1 查询、低效算法
-  - ✅ 质量检查（Quality）
+  - ⏳ 质量检查（Quality）
     - 过长函数、缺失文档、裸 except、魔法数字
-  - ✅ 可访问性检查（Accessibility）
+  - ⏳ 可访问性检查（Accessibility）
     - 缺少 alt、role、label 属性
-  - ✅ AI 残留检查（AI Residuals）
+  - ⏳ AI 残留检查（AI Residuals）
     - TODO/FIXME、mock 数据、localhost、跳过的测试
-  - ✅ Verdict 判定（determine_verdict）
+  - ⏳ Verdict 判定（determine_verdict）
     - Critical ≥ 1 或 Major ≥ 2 → REQUEST_CHANGES
-  - ✅ CLI 命令扩展：
+  - ⏳ CLI 命令扩展：
     - `harness review code <file>` - 审查代码文件
     - `harness review code --all` - 审查所有变更
     - `harness review plan` - 审查计划合理性
     - `harness review last` - 显示最近审查结果
-  - ✅ 测试覆盖率 84%（190 个测试全部通过）
-  - ✅ reviewer.py 覆盖率 100%
+  - ⏳ 测试覆盖率 84%（190 个测试全部通过）
+  - ⏳ reviewer.py 覆盖率 100%
 - ⏳ MVP 实现 - Phase 5: 测试和文档
 
 ## 贡献
@@ -222,9 +222,5 @@ MIT License
 ---
 
 **开始日期**：2026-04-08
-**当前阶段**：阶段三 - 构建 MVP（Phase 4 已完成）
-**Phase 1 成果**：核心框架实现完成，98% 测试覆盖率，19 个测试全部通过
-**Phase 2 成果**：Plan 功能实现完成，92% 测试覆盖率，81 个测试全部通过
-**Phase 3 成果**：Work 功能实现完成，80% 测试覆盖率，123 个测试全部通过
-**Phase 4 成果**：Review 功能实现完成，84% 测试覆盖率，190 个测试全部通过
-**下一步**：实现 Phase 5 - 测试和文档（完善文档、使用指南、示例项目）
+**当前阶段**：准备开始
+**状态**：所有阶段未开始
