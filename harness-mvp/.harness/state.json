@@ -1,0 +1,20 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "title": "测试任务 1",
+      "description": "这是一个测试任务",
+      "status": "WIP",
+      "priority": "REQUIRED",
+      "acceptance_criteria": [],
+      "dependencies": [],
+      "estimated_effort": 2,
+      "actual_effort": null,
+      "created_at": "2026-04-09T21:11:42.547738",
+      "updated_at": "2026-04-09T21:11:54.536214",
+      "completed_at": null,
+      "block_reason": null
+    }
+  ],
+  "updated_at": "2026-04-09T21:11:54.536214"
+}

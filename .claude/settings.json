@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(harness --version)",
+      "Bash(harness plan:*)",
+      "Bash(python -m pytest tests/ --cov=harness --cov-report=term-missing)",
+      "Bash(python -m pytest tests/test_executor.py -v --no-cov)",
+      "Bash(python -m pytest tests/test_executor.py::TestGitWorktreeManager tests/test_executor.py::TestTaskExecutionService -v --no-cov)",
+      "Bash(python -m pytest tests/test_cli.py::TestWorkCommands -v --no-cov)",
+      "Bash(python -m pytest --cov=harness --cov-report=term-missing)",
+      "Bash(python -m harness work --help)",
+      "Bash(python -c \"from harness.cli import main; main\\(\\)\" -- work --help)",
+      "Bash(dir \"E:\\\\IDEWorkplaces\\\\VS\\\\harness-engineering-for-cc\\\\harness-mvp\\\\harness\")",
+      "Bash(python -m pytest tests/test_reviewer.py -v)",
+      "Bash(python -m pytest tests/test_cli.py::TestReviewCommands -v)",
+      "Bash(python -c \"from harness.cli import main; from click.testing import CliRunner; runner = CliRunner\\(\\); result = runner.invoke\\(main, ['review', '--help']\\); print\\(result.output\\)\")",
+      "Bash(python -c ':*)",
+      "Bash(python -m pytest tests/test_reviewer.py -v --tb=short)"
+    ]
+  }
+}
