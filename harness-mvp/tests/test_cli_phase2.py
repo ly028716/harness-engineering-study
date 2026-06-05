@@ -136,7 +136,7 @@ class TestPlanSync:
 
         result = runner.invoke(main, ['plan', 'sync'])
         assert result.exit_code == 0
-        assert "Task 1" in plans_file.read_text()
+        assert "Task 1" in plans_file.read_text(encoding='utf-8')
 
 
 class TestPlanAdd:

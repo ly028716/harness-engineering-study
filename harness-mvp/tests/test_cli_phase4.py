@@ -30,7 +30,7 @@ def temp_project(tmp_path, temp_harness_dir):
 def add(a, b):
     """返回两个数的和"""
     return a + b
-''')
+''', encoding='utf-8')
 
     # 创建有问题的文件
     bad_file = tmp_path / "bad_code.py"
@@ -40,7 +40,7 @@ def login(user_id):
     cursor.execute("SELECT * FROM users WHERE id = " + user_id)
     API_KEY = "test_key_12345"
     return True
-''')
+''', encoding='utf-8')
 
     return tmp_path
 

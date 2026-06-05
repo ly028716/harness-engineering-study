@@ -1,5 +1,7 @@
-"""执行引擎 - Phase 3"""
+"""执行引擎 - Phase 3 + AI 集成"""
 import asyncio
+import os
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -7,6 +9,8 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any, Tuple
 
 from harness.models import Task, TaskStatus
+from harness.ai_client import AIClient
+from harness.prompts import WORKER_SYSTEM_PROMPT, build_work_prompt
 
 
 class ExecutionMode(Enum):
@@ -42,15 +46,17 @@ class ExecutionResult:
 
 
 class WorkerAgent:
-    """工作 Agent - 执行单个任务"""
+    """工作 Agent - 使用 AI 生成代码执行单个任务"""
 
-    def __init__(self, task: Task):
+    def __init__(self, task: Task, ai_client: Optional[AIClient] = None):
         """初始化 Worker Agent
 
         Args:
             task: 要执行的任务
+            ai_client: AI 客户端，默认从环境变量自动创建
         """
         self.task = task
+        self.ai_client = ai_client
         self.status = "idle"
         self.output: List[str] = []
         self.started_at: Optional[datetime] = None
@@ -72,8 +78,11 @@ class WorkerAgent:
         """
         self.status = status
 
-    def execute(self) -> ExecutionResult:
+    def execute(self, work_dir: str = "") -> ExecutionResult:
         """执行任务
+
+        Args:
+            work_dir: 工作目录，用于写入生成的文件
 
         Returns:
             执行结果
@@ -82,13 +91,16 @@ class WorkerAgent:
         self.update_status("running")
         self.capture_output(f"开始执行任务：{self.task.title}")
 
+        success = False
         try:
-            # 模拟任务执行
-            self._execute_task()
+            self._execute_task(work_dir)
             success = True
+        except ValueError as e:
+            self.capture_output(f"配置错误：{str(e)}")
+        except ImportError as e:
+            self.capture_output(f"依赖错误：{str(e)}")
         except Exception as e:
-            self.capture_output(f"错误：{str(e)}")
-            success = False
+            self.capture_output(f"执行错误：{str(e)}")
 
         self.completed_at = datetime.now()
         self.update_status("completed")
@@ -105,13 +117,82 @@ class WorkerAgent:
             duration_seconds=duration
         )
 
-    def _execute_task(self):
-        """执行任务逻辑（基础实现）"""
+    def _execute_task(self, work_dir: str = ""):
+        """执行任务逻辑 — 调用 AI 生成代码
+
+        Args:
+            work_dir: 工作目录
+        """
+        self.capture_output(f"任务描述：{self.task.description or '无'}")
+
+        # 创建 AI 客户端
+        if self.ai_client is None:
+            try:
+                self.ai_client = AIClient()
+            except ValueError as e:
+                self.capture_output(str(e))
+                self.capture_output("回退到模拟模式（仅输出任务信息）")
+                self._fallback_execute()
+                return
+
+        # 构建提示词
+        user_prompt = build_work_prompt(
+            task_title=self.task.title,
+            task_description=self.task.description,
+            acceptance_criteria=self.task.acceptance_criteria,
+            dependencies=self.task.dependencies,
+        )
+
+        self.capture_output("正在调用 AI 生成代码...")
+        response = self.ai_client.generate_code(WORKER_SYSTEM_PROMPT, user_prompt)
+
+        # 解析并写入生成的文件
+        files_written = self._parse_and_write_files(response, work_dir)
+        if files_written:
+            self.capture_output(f"已生成 {len(files_written)} 个文件:")
+            for f in files_written:
+                self.capture_output(f"  ✅ {f}")
+        else:
+            self.capture_output("AI 返回内容（未检测到代码文件）:")
+            # 截断过长响应
+            display = response[:500] + "..." if len(response) > 500 else response
+            self.capture_output(display)
+
+    def _fallback_execute(self):
+        """模拟执行（无 API key 时的回退）"""
         self.capture_output(f"任务描述：{self.task.description or '无'}")
         if self.task.acceptance_criteria:
             self.capture_output("验收标准:")
             for criterion in self.task.acceptance_criteria:
                 self.capture_output(f"  - {criterion}")
+
+    def _parse_and_write_files(self, response: str, work_dir: str) -> List[str]:
+        """解析 AI 响应中的代码块并写入文件
+
+        Args:
+            response: AI 响应文本
+            work_dir: 工作目录
+
+        Returns:
+            写入的文件路径列表
+        """
+        # 匹配 ```python:<path> 和 ```python 代码块
+        pattern = r'```(?:python(?::(\S+))?|(\S+))\s*\n(.*?)```'
+        matches = re.findall(pattern, response, re.DOTALL)
+
+        written = []
+        for path_from_pattern, lang, code in matches:
+            file_path = path_from_pattern or lang or "generated.py"
+            # 清理路径（移除可能的引号和空格）
+            file_path = file_path.strip("'\"` ")
+
+            # 写入文件
+            full_path = Path(work_dir) / file_path if work_dir else Path(file_path)
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            full_path.write_text(code.strip(), encoding='utf-8')
+            written.append(str(full_path))
+
+        return written
 
 
 def select_execution_mode(tasks: List[Task]) -> ExecutionMode:
@@ -220,7 +301,7 @@ class SoloExecutor:
             执行结果
         """
         worker = WorkerAgent(task)
-        return worker.execute()
+        return worker.execute(work_dir=self.work_dir)
 
 
 class ParallelExecutor:
@@ -250,7 +331,7 @@ class ParallelExecutor:
 
         # 顺序执行（基础实现，后续可改为异步并行）
         for worker in workers:
-            result = worker.execute()
+            result = worker.execute(work_dir=self.work_dir)
             results.append(result)
 
         return results

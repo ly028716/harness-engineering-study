@@ -15,7 +15,8 @@ class TestCLIBasics:
         result = runner.invoke(main, ['--version'])
 
         assert result.exit_code == 0
-        assert '0.1.0' in result.output
+        from harness import __version__
+        assert __version__ in result.output
 
     def test_help_flag(self):
         """RED: 测试 --help 标志显示帮助信息"""
