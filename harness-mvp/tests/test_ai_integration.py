@@ -120,10 +120,8 @@ class TestWorkerAgentWithAI:
         assert result.success is True
         assert "测试描述" in result.output or "测试任务" in result.output
 
-    def test_worker_parse_code_blocks(self):
+    def test_worker_parse_code_blocks(self, tmp_path):
         """测试解析 AI 响应中的代码块"""
-        from harness.executor import WorkerAgent
-        import tempfile
         task = Task(id=1, title="测试")
         agent = WorkerAgent(task)
 
@@ -137,10 +135,9 @@ class TestWorkerAgentWithAI:
             assert add(1, 2) == 3
         ```
         """
-        with tempfile.TemporaryDirectory() as td:
-            files = agent._parse_and_write_files(response, td)
-            assert len(files) == 2
-            assert any(f.endswith("utils.py") for f in files)
+        files = agent._parse_and_write_files(response, str(tmp_path))
+        assert len(files) == 2
+        assert any(f.endswith("utils.py") for f in files)
 
     def test_worker_empty_response(self):
         """测试 AI 返回空响应的处理"""

@@ -95,10 +95,6 @@ class WorkerAgent:
         try:
             self._execute_task(work_dir)
             success = True
-        except ValueError as e:
-            self.capture_output(f"配置错误：{str(e)}")
-        except ImportError as e:
-            self.capture_output(f"依赖错误：{str(e)}")
         except Exception as e:
             self.capture_output(f"执行错误：{str(e)}")
 
@@ -176,14 +172,13 @@ class WorkerAgent:
         Returns:
             写入的文件路径列表
         """
-        # 匹配 ```python:<path> 和 ```python 代码块
-        pattern = r'```(?:python(?::(\S+))?|(\S+))\s*\n(.*?)```'
+        # 匹配 ```python:<path> 或 ```python 代码块
+        pattern = r'```python(?::(\S+))?\s*\n(.*?)```'
         matches = re.findall(pattern, response, re.DOTALL)
 
         written = []
-        for path_from_pattern, lang, code in matches:
-            file_path = path_from_pattern or lang or "generated.py"
-            # 清理路径（移除可能的引号和空格）
+        for file_path, code in matches:
+            file_path = file_path or "generated.py"
             file_path = file_path.strip("'\"` ")
 
             # 写入文件
