@@ -44,7 +44,7 @@ harness-engineering-study/
 │   └── *-analysis.md             # 深度分析文档
 ├── harness-mvp/                   # MVP 实现
 │   ├── harness/                  # 核心包（Phase 1-4 完成）
-│   ├── tests/                    # 测试套件（190 个测试，84% 覆盖率）
+│   ├── tests/                    # 测试套件（272 个测试，86% 覆盖率）
 │   ├── .harness/                 # 数据目录
 │   └── pyproject.toml
 └── examples/                      # 使用示例
@@ -64,12 +64,12 @@ harness-engineering-study/
 - 对比分析文档完成
 - 设计模式提炼完成
 
-### 阶段三：构建 MVP ✅ 80%
+### 阶段三：构建 MVP ✅ 100%
 - Phase 1: 核心框架 ✅
 - Phase 2: Plan 功能 ✅
 - Phase 3: Work 功能 ✅
 - Phase 4: Review 功能 ✅
-- Phase 5: 测试和文档 ⏳ 进行中
+- Phase 5: 文档、配置系统和 AI 集成 ✅
 
 ### 阶段四：迭代增强 ⏳ 未开始
 ### 阶段五：实战应用 ⏳ 未开始
@@ -225,6 +225,11 @@ harness work solo 1
 harness work parallel
 harness work all
 
+# Config 命令
+harness config show
+harness config set ai_model claude-opus-4-20250514
+harness config init
+
 # Review 命令
 harness review code src/file.py
 harness review code --all
@@ -268,10 +273,10 @@ harness review last
 
 | 指标 | 目标 | 当前 |
 |------|------|------|
-| 测试覆盖率 | ≥ 80% | 84% ✅ |
-| 测试数量 | - | 190 个 ✅ |
+| 测试覆盖率 | ≥ 80% | 86% ✅ |
+| 测试数量 | - | 272 个 ✅ |
 | reviewer.py 覆盖率 | 100% | 100% ✅ |
-| 核心代码行数 | - | ~900 行 |
+| 核心代码行数 | - | ~1500 行 |
 
 ### 代码质量检查清单
 
@@ -329,5 +334,5 @@ harness review last
 ---
 
 **创建日期**：2026-04-13
-**最后更新**：2026-04-13
-**状态**：阶段三 Phase 1-4 完成，Phase 5 进行中
+**最后更新**：2026-06-05
+**状态**：阶段三全部完成 ✅

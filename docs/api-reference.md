@@ -6,6 +6,7 @@
 
 - [数据模型](#数据模型)
 - [任务管理](#任务管理)
+- [配置管理](#配置管理)
 - [执行引擎](#执行引擎)
 - [代码审查](#代码审查)
 - [工具函数](#工具函数)
@@ -364,6 +365,125 @@ events = history.get_recent_events(limit=5)
 events = history.get_events_by_type("task_completed")
 ```
 
+## 配置管理
+
+### Settings
+
+配置设置数据类。
+
+```python
+from harness.config import Settings, ExecutionModePreference
+
+@dataclass
+class Settings:
+    ai_model: str = "claude-sonnet-4-20250514"
+    execution_mode: ExecutionModePreference = ExecutionModePreference.AUTO
+    max_workers: int = 4
+    api_key: str = ""  # 仅内存持有，不写入文件
+```
+
+**方法**：
+
+#### `to_dict() -> Dict[str, Any]`
+序列化为字典（排除敏感字段）。
+
+```python
+data = settings.to_dict()
+# {"ai_model": "...", "execution_mode": "AUTO", "max_workers": 4}
+```
+
+#### `from_dict(data: Dict[str, Any]) -> Settings` (classmethod)
+从字典创建设置。
+
+```python
+settings = Settings.from_dict({"ai_model": "claude-opus-4-20250514"})
+```
+
+#### `merge(other: Settings) -> Settings`
+合并两个设置对象（other 的非默认值覆盖当前值）。
+
+```python
+merged = settings.merge(other_settings)
+```
+
+### ExecutionModePreference
+
+执行模式偏好枚举。
+
+```python
+from harness.config import ExecutionModePreference
+
+class ExecutionModePreference(Enum):
+    AUTO = "AUTO"        # 自动选择
+    SOLO = "SOLO"        # 始终 Solo
+    PARALLEL = "PARALLEL"  # 始终 Parallel
+```
+
+### ConfigManager
+
+配置管理器。
+
+```python
+from harness.config import ConfigManager
+from pathlib import Path
+
+manager = ConfigManager(Path(".harness"))
+```
+
+**方法**：
+
+#### `__init__(harness_dir: Path)`
+初始化配置管理器。如果配置文件不存在，自动创建默认配置。
+
+#### `load() -> Settings`
+从文件加载配置。
+
+```python
+settings = manager.load()
+```
+
+#### `save(settings: Settings) -> None`
+保存配置到文件。
+
+```python
+manager.save(settings)
+```
+
+#### `update(**kwargs) -> Settings`
+更新部分配置。
+
+```python
+settings = manager.update(ai_model="claude-opus-4-20250514")
+settings = manager.update(max_workers=8)
+```
+
+#### `reset() -> None`
+重置为默认配置。
+
+```python
+manager.reset()
+```
+
+#### `load_with_env_overrides() -> Settings`
+加载配置并应用环境变量覆盖。
+
+```python
+# ANTHROPIC_API_KEY 覆盖 api_key
+# HARNESS_AI_MODEL 覆盖 ai_model
+settings = manager.load_with_env_overrides()
+```
+
+### load_config
+
+便捷函数。
+
+```python
+from harness.config import load_config
+
+config = load_config(Path(".harness"))
+# 等同于 ConfigManager(harness_dir).load_with_env_overrides()
+```
+
 ## 执行引擎
 
 ### ExecutionMode
@@ -686,5 +806,5 @@ def process_tasks(store: TaskStore, status: TaskStatus) -> List[Task]:
 
 ---
 
-**版本**: 0.4.0
-**更新日期**: 2026-04-11
+**版本**: 0.6.0
+**更新日期**: 2026-06-05

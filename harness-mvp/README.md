@@ -59,6 +59,12 @@ harness review code src/auth.py
 - ✅ Verdict 判定（Critical ≥ 1 或 Major ≥ 2 → REQUEST_CHANGES）
 - ✅ 审查报告生成
 
+### Phase 5: 配置系统和 AI 集成
+- ✅ 配置系统（ConfigManager, Settings）
+- ✅ 环境变量覆盖（ANTHROPIC_API_KEY, HARNESS_AI_MODEL）
+- ✅ 配置 CLI 命令（show/set/init）
+- ✅ AIClient 从配置读取 AI 模型
+
 ## CLI 命令
 
 ### Plan 命令
@@ -80,6 +86,14 @@ harness review code src/auth.py
 | `harness work parallel` | Parallel 模式执行所有 TODO 任务 |
 | `harness work all [N\|M-K]` | 执行所有/指定范围任务 |
 | `harness work status` | 显示执行状态 |
+
+### Config 命令
+
+| 命令 | 描述 |
+|------|------|
+| `harness config show` | 显示当前配置 |
+| `harness config set <key> <value>` | 更新配置项 |
+| `harness config init` | 重置为默认配置 |
 
 ### Review 命令
 
@@ -146,6 +160,25 @@ harness work all 1-5
 harness work status
 ```
 
+### Config 配置
+
+```bash
+# 显示当前配置
+harness config show
+
+# 更新 AI 模型
+harness config set ai_model claude-opus-4-20250514
+
+# 更新执行模式
+harness config set execution_mode PARALLEL
+
+# 更新最大 Worker 数
+harness config set max_workers 8
+
+# 重置为默认配置
+harness config init
+```
+
 ### Review 审查
 
 ```bash
@@ -170,8 +203,10 @@ harness review last
 ```
 harness-mvp/
 ├── harness/              # 核心包
-│   ├── __init__.py      # 版本：0.4.0
+│   ├── __init__.py      # 版本：0.6.0
 │   ├── cli.py           # CLI 入口点
+│   ├── ai_client.py     # AI 客户端
+│   ├── config.py        # 配置管理
 │   ├── models.py        # 数据模型
 │   ├── store.py         # 任务存储
 │   ├── history.py       # 历史记录
@@ -181,10 +216,12 @@ harness-mvp/
 │   ├── reviewer.py      # Reviewer Agent
 │   ├── parser.py        # Markdown 解析器
 │   └── state.py         # 状态管理器
-├── tests/               # 测试套件（190 个测试）
+├── tests/               # 测试套件（272 个测试，86% 覆盖率）
 │   ├── test_cli.py
 │   ├── test_cli_phase2.py
 │   ├── test_cli_phase4.py
+│   ├── test_cli_config.py
+│   ├── test_ai_integration.py
 │   ├── test_models.py
 │   ├── test_store.py
 │   ├── test_history.py
@@ -193,6 +230,7 @@ harness-mvp/
 │   ├── test_reviewer.py
 │   ├── test_parser.py
 │   ├── test_state.py
+│   ├── test_config.py
 │   └── test_integration.py
 ├── .harness/            # 数据目录
 │   ├── state.json       # 当前状态
@@ -336,8 +374,8 @@ pytest tests/ --cov=harness --cov-report=term-missing
 
 ### 测试结果
 
-- ✅ 190 个测试全部通过
-- ✅ 测试覆盖率：84%（超过 80% 要求）
+- ✅ 272 个测试全部通过
+- ✅ 测试覆盖率：86%（超过 80% 要求）
 - ✅ reviewer.py 覆盖率：100%
 
 ## 技术栈
@@ -346,6 +384,7 @@ pytest tests/ --cov=harness --cov-report=term-missing
 - **Click 8.1.0+** - CLI 框架
 - **pytest 7.4.0+** - 测试框架
 - **pytest-cov 4.1.0+** - 覆盖率工具
+- **Anthropic SDK** - AI 集成（可选）
 
 ## 设计原则
 
@@ -472,15 +511,17 @@ MIT License
 ## 相关文档
 
 - [完整学习计划](../docs/learning-plan.md)
+- [快速开始指南](../docs/quick-start.md)
+- [API 参考文档](../docs/api-reference.md)
 - [Phase 1 完成报告](../docs/phase1-completion.md)
 - [Phase 2 完成报告](../docs/phase2-completion.md)
 - [Phase 3 完成报告](../docs/phase3-completion.md)
 - [Phase 4 完成报告](../docs/phase4-completion.md)
+- [Phase 5 完成报告](../docs/phase5-completion.md)
 - [MVP 架构设计](../design/mvp-architecture.md)
 
 ---
 
-**版本**: 0.4.0
-**状态**: Phase 1-4 完成 ✅
-**测试**: 190 个测试，84% 覆盖率
-**下一步**: Phase 5 - 文档和示例
+**版本**: 0.6.0
+**状态**: 全部完成 ✅
+**测试**: 272 个测试，86% 覆盖率

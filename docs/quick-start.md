@@ -197,6 +197,22 @@ harness work all 1-5
 harness work status
 ```
 
+### Config 命令
+
+```bash
+# 显示当前配置
+harness config show
+
+# 更新 AI 模型
+harness config set ai_model claude-opus-4-20250514
+
+# 更新执行模式
+harness config set execution_mode PARALLEL
+
+# 重置为默认配置
+harness config init
+```
+
 ### Review 命令
 
 ```bash
@@ -337,6 +353,7 @@ pytest tests/ --cov=harness
 harness --help
 harness plan --help
 harness work --help
+harness config --help
 harness review --help
 ```
 

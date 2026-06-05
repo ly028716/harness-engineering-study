@@ -15,25 +15,23 @@ Harness Engineering 是一种新的软件开发范式：
 harness-engineering-study/
 ├── docs/                          # 文档
 │   ├── learning-plan.md          # 完整学习计划
-│   └── stage1-tasks.md           # 阶段一任务清单
+│   ├── stage1-tasks.md           # 阶段任务清单
+│   ├── quick-start.md            # 快速开始指南
+│   ├── api-reference.md          # API 参考文档
+│   └── phase*-completion.md      # 各阶段完成报告
 ├── design/                        # 设计文档
 │   └── mvp-architecture.md       # MVP 架构设计
 ├── research/                      # 研究资料
-│   ├── resources.md              # 资源汇总
 │   ├── core-concepts.md          # 核心概念
-│   ├── openai-harness-engineering-cn.md  # OpenAI 实验中文文档
-│   ├── anthropic-harness-design-cn.md    # Anthropic 设计中文文档
-│   ├── modern-harness-2026-cn.md # 2026 年最新实践综合指南
-│   ├── existing-harnesses-analysis.md    # 现有项目分析
-│   ├── comparison.md             # 项目对比分析
-│   └── design-patterns.md        # 核心设计模式
-├── mvp/                          # MVP 实现
-│   ├── orchestrator/             # 主控制循环
-│   ├── planner/                  # 任务规划器
-│   ├── executor/                 # 代码执行器
-│   ├── validator/                # 质量验证器
-│   └── memory/                   # 上下文管理
+│   ├── design-patterns.md        # 设计模式
+│   ├── comparison.md             # 项目对比
+│   └── *-analysis.md             # 深度分析文档
+├── harness-mvp/                   # MVP 实现（核心）
+│   ├── harness/                  # 核心包（14 个模块）
+│   ├── tests/                    # 测试套件（272 个测试，86% 覆盖率）
+│   └── README.md                 # 详细文档
 └── examples/                     # 使用示例
+    └── todo-app/                 # Todo App 示例项目
 ```
 
 ## 学习路径
@@ -85,9 +83,22 @@ cat research/resources.md
 2. [Anthropic Harness Design](https://gist.github.com/0xK8oX/0292e8da944ceb9226a7c2500b47124e) - 学习设计原则
 3. [claude-code-harness](https://github.com/Chachamaru127/claude-code-harness) - 分析实现
 
-### 3. 构建 MVP
+### 3. 运行 MVP
 
-（即将开始）
+```bash
+cd harness-mvp
+pip install -e ".[dev]"
+
+# 查看命令帮助
+harness --help
+
+# 创建任务并执行
+harness plan add --title "Hello World" --priority REQUIRED
+harness work solo 1
+harness review code hello.py
+```
+
+详细说明请查看 [harness-mvp/README.md](harness-mvp/README.md) 或 [docs/quick-start.md](docs/quick-start.md)。
 
 ## 核心资源
 
@@ -100,8 +111,6 @@ cat research/resources.md
 - [claude-code-harness](https://github.com/Chachamaru127/claude-code-harness) - Plan→Work→Review 循环
 - [refact](https://github.com/smallcloudai/refact) - 端到端工程任务处理
 - [agent-os](https://github.com/buildermethods/agent-os) - 规划和执行系统
-- [AgentGPT](https://github.com/reworkd/AgentGPT) - 浏览器端自主 Agent
-- [agno](https://github.com/agno-agi/agno) - 多智能体系统
 
 ## 关键概念
 
@@ -114,98 +123,38 @@ cat research/resources.md
 
 ## 当前进度
 
-**阶段一：理解核心概念** ⏳ 未开始
-- ⏳ 项目结构创建
-- ⏳ 学习计划制定
-- ⏳ 资源汇总完成
-- ⏳ 核心概念文档
-- ⏳ OpenAI Harness Engineering 中文文档
-- ⏳ Anthropic Harness Design 中文文档
-- ⏳ Modern Harness 2026 综合指南
-- ⏳ 现有项目分析（claude-code-harness、refact、agent-os）
-- ⏳ 对比分析文档
-- ⏳ 核心设计模式提炼
-- ⏳ claude-code-harness 深度实现分析
-- ⏳ refact 深度实现分析
-- ⏳ agent-os 深度实现分析
+**阶段一：理解核心概念** ✅ 100%
+- 核心理论文档阅读完成
+- 核心概念文档编写完成
+- 关键问题提炼完成
 
-**阶段二：研究现有实践** ⏳ 未开始
-- ⏳ 分析 claude-code-harness 代码结构
-- ⏳ 理解 TypeScript 核心引擎
-- ⏳ 掌握守护规则系统
-- ⏳ 学习三智能体架构
-- ⏳ 分析 refact 项目（Rust 架构、工具系统、会话状态机）
-- ⏳ 分析 agent-os 项目（标准驱动、命令系统、Profile 继承）
-- ⏳ claude-code-harness 运行体验记录
+**阶段二：研究现有实践** ✅ 95%
+- claude-code-harness 深度分析完成
+- refact 深度分析完成
+- agent-os 深度分析完成
+- 对比分析文档完成
+- 设计模式提炼完成
 
-**阶段三：构建 MVP** ⏳ 未开始
-- ⏳ MVP 架构设计（design/mvp-architecture.md）
-  - 设计原则：轻量级、核心功能聚焦、明确决策规则、可观测性
-  - 技术栈：Python 3.11+、JSON 文件、Click CLI、Anthropic SDK
-  - 3 个核心技能：plan（计划管理）、work（任务执行）、review（代码审查）
-  - 自动模式选择：1-2 任务 Solo、3+ 任务 Parallel
-  - 明确的 Verdict 阈值：Critical 1 或 Major 2+ → REQUEST_CHANGES
-- ⏳ MVP 实现 - Phase 1: 核心框架（harness-mvp/）
-  - ⏳ 项目结构和配置（pyproject.toml）
-  - ⏳ CLI 框架（Click）- `harness --version`, `harness plan create`
-  - ⏳ 状态管理（StateManager）- JSON 持久化到 .harness/state.json
-  - ⏳ Markdown 解析器（MarkdownParser）- 解析 Plans.md 格式
-  - ⏳ 测试覆盖率 98%（19 个测试全部通过）
-  - ⏳ 核心代码 98 行，零编译依赖
-- ⏳ MVP 实现 - Phase 2: Plan 功能（harness-mvp/）
-  - ⏳ 数据模型（Task, TaskStatus, Priority - dataclass + Enum）
-  - ⏳ 任务存储（TaskStore - JSON 持久化）
-  - ⏳ 历史记录（HistoryManager - 变更历史追踪）
-  - ⏳ Planner Agent（PlanGenerator - 任务生成）
-  - ⏳ CLI 命令扩展：
-    - `harness plan list` - 列出所有任务
-    - `harness plan show <id>` - 显示任务详情
-    - `harness plan update <id> --status <status>` - 更新状态
-    - `harness plan sync` - 同步 Plans.md 和状态
-    - `harness plan add` - 交互式添加任务
-    - `harness plan stats` - 进度统计
-  - ⏳ 测试覆盖率 92%（81 个测试全部通过）
-- ⏳ MVP 实现 - Phase 3: Work 功能（harness-mvp/）
-  - ⏳ 执行引擎（ExecutionEngine - 172 行）
-    - Worker Agent 实现
-  - ⏳ 执行模式（ExecutionMode 枚举）
-    - Solo 模式（1-2 任务）
-    - Parallel 模式（3+ 任务）
-  - ⏳ 自动模式选择（select_execution_mode）
-  - ⏳ Git 集成（GitWorktreeManager - 131 行）
-    - 工作区隔离
-    - 模拟模式支持
-  - ⏳ CLI 命令扩展：
-    - `harness work solo <id>` - 单任务执行
-    - `harness work parallel` - 并行执行
-    - `harness work all [N|M-K]` - 执行所有/指定任务
-    - `harness work status` - 执行状态
-  - ⏳ 依赖关系处理（拓扑排序分批次）
-  - ⏳ 执行结果记录（ExecutionResult）
-  - ⏳ 测试覆盖率 80%（123 个测试全部通过）
-- ⏳ MVP 实现 - Phase 4: Review 功能（harness-mvp/）
-  - ⏳ Reviewer Agent（ReviewerAgent - 498 行）
-    - 5 观点审查实现
-  - ⏳ 安全检查（Security）
-    - SQL 注入、XSS、硬编码密钥、eval 使用
-  - ⏳ 性能检查（Performance）
-    - N+1 查询、低效算法
-  - ⏳ 质量检查（Quality）
-    - 过长函数、缺失文档、裸 except、魔法数字
-  - ⏳ 可访问性检查（Accessibility）
-    - 缺少 alt、role、label 属性
-  - ⏳ AI 残留检查（AI Residuals）
-    - TODO/FIXME、mock 数据、localhost、跳过的测试
-  - ⏳ Verdict 判定（determine_verdict）
-    - Critical ≥ 1 或 Major ≥ 2 → REQUEST_CHANGES
-  - ⏳ CLI 命令扩展：
-    - `harness review code <file>` - 审查代码文件
-    - `harness review code --all` - 审查所有变更
-    - `harness review plan` - 审查计划合理性
-    - `harness review last` - 显示最近审查结果
-  - ⏳ 测试覆盖率 84%（190 个测试全部通过）
-  - ⏳ reviewer.py 覆盖率 100%
-- ⏳ MVP 实现 - Phase 5: 测试和文档
+**阶段三：构建 MVP** ✅ 100%
+- **Phase 1** 核心框架 ✅ — CLI、状态管理、Markdown 解析
+- **Phase 2** Plan 功能 ✅ — 数据模型、任务存储、Planner Agent
+- **Phase 3** Work 功能 ✅ — Solo/Parallel 执行引擎、Git 集成
+- **Phase 4** Review 功能 ✅ — 5 观点审查、Verdict 判定
+- **Phase 5** 文档和配置 ✅ — 中英文文档、配置系统、AI 集成
+
+**阶段四：迭代增强** ⏳ 未开始
+**阶段五：实战应用** ⏳ 未开始
+
+### MVP 质量指标
+
+| 指标 | 数值 |
+|------|------|
+| 测试数量 | 272 ✅ |
+| 测试覆盖率 | 86% ✅ |
+| 模块数量 | 14 |
+| reviewer.py 覆盖率 | 100% ✅ |
+| CLI 命令 | 18+ |
+| 文档 | 中英文双版 |
 
 ## 贡献
 
@@ -222,5 +171,6 @@ MIT License
 ---
 
 **开始日期**：2026-04-08
-**当前阶段**：准备开始
-**状态**：所有阶段未开始
+**最后更新**：2026-06-05
+**当前阶段**：阶段三完成 ✅
+**状态**：MVP 构建完成，迭代增强待开始
