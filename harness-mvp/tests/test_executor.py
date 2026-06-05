@@ -445,3 +445,138 @@ class TestTaskExecutionService:
 
             with pytest.raises(ValueError):
                 service.execute_task_solo(999)
+
+
+class TestParallelExecutorConcurrency:
+    """测试真正的并行执行"""
+
+    def test_parallel_executor_runs_concurrently(self):
+        """RED: 测试任务真正并行执行（耗时远小于串行）"""
+        from harness.executor import ParallelExecutor, ExecutionResult
+        import time
+
+        class SlowWorker:
+            def __init__(self, task):
+                self.task = task
+            def execute(self, work_dir=""):
+                time.sleep(0.15)
+                return ExecutionResult(
+                    task_id=self.task.id,
+                    task_title=self.task.title,
+                    success=True
+                )
+
+        executor = ParallelExecutor(work_dir="/tmp/test", worker_class=SlowWorker)
+        tasks = [Task(id=i, title=f"Task {i}") for i in range(3)]
+
+        start = time.time()
+        results = executor.execute_batch(tasks)
+        elapsed = time.time() - start
+
+        # 串行需 0.45s (3×0.15s)，并行应在 0.3s 内
+        assert len(results) == 3
+        assert elapsed < 0.35, f"串行执行时间 ({elapsed:.2f}s) 超过并行阈值"
+
+    def test_parallel_executor_returns_results_in_order(self):
+        """RED: 测试结果按输入任务顺序返回"""
+        from harness.executor import ParallelExecutor, ExecutionResult
+
+        class SimpleWorker:
+            def __init__(self, task):
+                self.task = task
+            def execute(self, work_dir=""):
+                return ExecutionResult(
+                    task_id=self.task.id,
+                    task_title=self.task.title,
+                    success=True
+                )
+
+        executor = ParallelExecutor(work_dir="/tmp/test", worker_class=SimpleWorker)
+        tasks = [
+            Task(id=3, title="Task 3"),
+            Task(id=1, title="Task 1"),
+            Task(id=2, title="Task 2"),
+        ]
+
+        results = executor.execute_batch(tasks)
+        assert results[0].task_id == 3
+        assert results[1].task_id == 1
+        assert results[2].task_id == 2
+
+    def test_parallel_executor_handles_mixed_results(self):
+        """RED: 测试部分任务失败不影响其他任务"""
+        from harness.executor import ParallelExecutor, ExecutionResult
+
+        class MixedWorker:
+            def __init__(self, task):
+                self.task = task
+            def execute(self, work_dir=""):
+                success = self.task.id != 2  # Task 2 fails
+                return ExecutionResult(
+                    task_id=self.task.id,
+                    task_title=self.task.title,
+                    success=success
+                )
+
+        executor = ParallelExecutor(work_dir="/tmp/test", worker_class=MixedWorker)
+        tasks = [Task(id=i, title=f"Task {i}") for i in range(1, 4)]
+
+        results = executor.execute_batch(tasks)
+        assert len(results) == 3
+        assert results[0].success is True
+        assert results[1].success is False
+        assert results[2].success is True
+
+    def test_parallel_executor_handles_exception_in_worker(self):
+        """RED: 测试一个 Worker 异常不影响其他 Worker"""
+        from harness.executor import ParallelExecutor, ExecutionResult
+
+        class UnstableWorker:
+            def __init__(self, task):
+                self.task = task
+            def execute(self, work_dir=""):
+                if self.task.id == 2:
+                    raise RuntimeError("Worker crashed")
+                return ExecutionResult(
+                    task_id=self.task.id,
+                    task_title=self.task.title,
+                    success=True
+                )
+
+        executor = ParallelExecutor(work_dir="/tmp/test", worker_class=UnstableWorker)
+        tasks = [Task(id=i, title=f"Task {i}") for i in range(1, 4)]
+
+        results = executor.execute_batch(tasks)
+        assert len(results) == 3
+        # 异常应该被捕获，对应结果为 failure
+        assert results[0].success is True
+        assert results[1].success is False
+        assert results[2].success is True
+
+    def test_parallel_executor_empty_batch(self):
+        """RED: 测试空批次"""
+        from harness.executor import ParallelExecutor
+
+        executor = ParallelExecutor(work_dir="/tmp/test")
+        results = executor.execute_batch([])
+        assert results == []
+
+    def test_parallel_executor_single_task(self):
+        """RED: 测试单个任务"""
+        from harness.executor import ParallelExecutor, ExecutionResult
+
+        class QuickWorker:
+            def __init__(self, task):
+                self.task = task
+            def execute(self, work_dir=""):
+                return ExecutionResult(
+                    task_id=self.task.id,
+                    task_title=self.task.title,
+                    success=True
+                )
+
+        executor = ParallelExecutor(work_dir="/tmp/test", worker_class=QuickWorker)
+        task = Task(id=1, title="Single Task")
+        results = executor.execute_batch([task])
+        assert len(results) == 1
+        assert results[0].success is True

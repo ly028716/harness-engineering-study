@@ -1,12 +1,13 @@
-"""执行引擎 - Phase 3 + AI 集成"""
+"""执行引擎 - Phase 3 + AI 集成 + 并行执行"""
 import asyncio
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Tuple
+from typing import List, Optional, Dict, Any, Tuple, Type
 
 from harness.models import Task, TaskStatus
 from harness.ai_client import AIClient
@@ -302,16 +303,20 @@ class SoloExecutor:
 class ParallelExecutor:
     """Parallel 执行器 - 并行执行任务"""
 
-    def __init__(self, work_dir: str):
+    def __init__(self, work_dir: str, worker_class: Type = WorkerAgent):
         """初始化 Parallel 执行器
 
         Args:
             work_dir: 工作目录
+            worker_class: Worker 类，默认 WorkerAgent，可替换为测试用 Mock
         """
         self.work_dir = work_dir
+        self.worker_class = worker_class
 
     def execute_batch(self, tasks: List[Task]) -> List[ExecutionResult]:
         """并行执行一批任务
+
+        使用 ThreadPoolExecutor 实现真正的并行执行。
 
         Args:
             tasks: 任务列表
@@ -319,15 +324,32 @@ class ParallelExecutor:
         Returns:
             执行结果列表
         """
-        results = []
+        if not tasks:
+            return []
 
         # 为每个任务创建 worker
-        workers = [WorkerAgent(task) for task in tasks]
+        workers = [(i, self.worker_class(task)) for i, task in enumerate(tasks)]
 
-        # 顺序执行（基础实现，后续可改为异步并行）
-        for worker in workers:
-            result = worker.execute(work_dir=self.work_dir)
-            results.append(result)
+        # 使用线程池并行执行
+        results = [None] * len(tasks)
+
+        with ThreadPoolExecutor(max_workers=len(tasks)) as executor:
+            future_map = {
+                executor.submit(worker.execute, work_dir=self.work_dir): idx
+                for idx, worker in workers
+            }
+
+            for future in as_completed(future_map):
+                idx = future_map[future]
+                try:
+                    results[idx] = future.result()
+                except Exception:
+                    results[idx] = ExecutionResult(
+                        task_id=tasks[idx].id,
+                        task_title=tasks[idx].title,
+                        success=False,
+                        error="Worker 执行异常",
+                    )
 
         return results
 
