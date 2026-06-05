@@ -32,15 +32,14 @@ class Settings:
     def __post_init__(self):
         """验证和修正字段"""
         if self.max_workers < 1:
-            object.__setattr__(self, "max_workers", 1)
+            self.max_workers = 1
 
     def to_dict(self) -> Dict[str, Any]:
-        """序列化为字典"""
+        """序列化为字典（排除敏感字段）"""
         return {
             "ai_model": self.ai_model,
             "execution_mode": self.execution_mode.value,
             "max_workers": self.max_workers,
-            "api_key": self.api_key,
         }
 
     @classmethod
@@ -129,7 +128,7 @@ class ConfigManager:
             if hasattr(settings, key):
                 if key == "execution_mode" and isinstance(value, str):
                     value = ExecutionModePreference.from_string(value)
-                object.__setattr__(settings, key, value)
+                setattr(settings, key, value)
         self.save(settings)
         return settings
 
@@ -151,11 +150,11 @@ class ConfigManager:
 
         env_api_key = os.environ.get("ANTHROPIC_API_KEY")
         if env_api_key:
-            object.__setattr__(settings, "api_key", env_api_key)
+            settings.api_key = env_api_key
 
         env_model = os.environ.get("HARNESS_AI_MODEL")
         if env_model:
-            object.__setattr__(settings, "ai_model", env_model)
+            settings.ai_model = env_model
 
         return settings
 
