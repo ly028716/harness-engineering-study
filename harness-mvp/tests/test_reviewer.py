@@ -538,3 +538,232 @@ class TestReviewResult:
         assert data["verdict"] == "REQUEST_CHANGES"
         assert len(data["issues"]) == 1
         assert data["summary"] == "发现安全问题"
+
+
+class TestReviewerAIIntegration:
+    """测试 AI 驱动的代码审查集成"""
+
+    @pytest.fixture
+    def mock_ai_client(self):
+        """创建模拟的 AIClient"""
+        from unittest.mock import MagicMock
+        from harness.ai_client import AIClient
+        client = MagicMock(spec=AIClient)
+        return client
+
+    def test_ai_review_returns_issues_from_json(self, mock_ai_client):
+        """RED: 测试 AI 审查返回结构化 JSON 问题"""
+        mock_ai_client.generate_code.return_value = '''[
+            {
+                "severity": "CRITICAL",
+                "category": "SECURITY",
+                "message": "发现 SQL 注入风险：使用字符串拼接",
+                "line": 5,
+                "suggestion": "使用参数化查询"
+            },
+            {
+                "severity": "MAJOR",
+                "category": "PERFORMANCE",
+                "message": "N+1 查询问题",
+                "line": 10,
+                "suggestion": "使用 JOIN 预加载"
+            }
+        ]'''
+
+        code = '''
+        cursor.execute("SELECT * FROM users WHERE id = " + user_id)
+        '''
+        reviewer = ReviewerAgent(ai_client=mock_ai_client)
+        issues = reviewer.ai_review(code, "test.py")
+
+        assert len(issues) == 2
+        assert issues[0].severity == Severity.CRITICAL
+        assert issues[0].category == Category.SECURITY
+        assert issues[0].file == "test.py"
+        assert issues[0].line == 5
+        assert issues[1].severity == Severity.MAJOR
+        assert issues[1].category == Category.PERFORMANCE
+
+    def test_ai_review_no_client_returns_empty(self):
+        """RED: 测试无 AIClient 时 AI 审查返回空列表"""
+        reviewer = ReviewerAgent()
+        issues = reviewer.ai_review("some code", "test.py")
+        assert issues == []
+
+    def test_ai_review_handles_invalid_json(self, mock_ai_client):
+        """RED: 测试 AI 返回无效 JSON 时优雅处理"""
+        mock_ai_client.generate_code.return_value = "这不是 JSON 格式的响应"
+
+        reviewer = ReviewerAgent(ai_client=mock_ai_client)
+        issues = reviewer.ai_review("code", "test.py")
+        assert issues == []
+
+    def test_ai_review_handles_empty_response(self, mock_ai_client):
+        """RED: 测试 AI 返回空字符串"""
+        mock_ai_client.generate_code.return_value = ""
+
+        reviewer = ReviewerAgent(ai_client=mock_ai_client)
+        issues = reviewer.ai_review("code", "test.py")
+        assert issues == []
+
+    def test_ai_review_empty_issues_array(self, mock_ai_client):
+        """RED: 测试 AI 返回空问题数组"""
+        mock_ai_client.generate_code.return_value = "[]"
+
+        reviewer = ReviewerAgent(ai_client=mock_ai_client)
+        issues = reviewer.ai_review("code", "test.py")
+        assert issues == []
+
+    def test_ai_review_missing_optional_fields(self, mock_ai_client):
+        """RED: 测试 AI 返回缺少可选字段的问题"""
+        mock_ai_client.generate_code.return_value = '''[
+            {
+                "severity": "MINOR",
+                "category": "QUALITY",
+                "message": "函数命名建议",
+                "line": 15
+            }
+        ]'''
+
+        reviewer = ReviewerAgent(ai_client=mock_ai_client)
+        issues = reviewer.ai_review("code", "test.py")
+        assert len(issues) == 1
+        assert issues[0].severity == Severity.MINOR
+        assert issues[0].category == Category.QUALITY
+        assert issues[0].suggestion is None
+
+    def test_ai_review_unknown_severity_falls_back_to_major(self, mock_ai_client):
+        """RED: 测试 AI 返回未知严重级别时回退到 MAJOR"""
+        mock_ai_client.generate_code.return_value = '''[
+            {
+                "severity": "UNKNOWN",
+                "category": "SECURITY",
+                "message": "未知级别问题",
+                "line": 1
+            }
+        ]'''
+
+        reviewer = ReviewerAgent(ai_client=mock_ai_client)
+        issues = reviewer.ai_review("code", "test.py")
+        assert len(issues) == 1
+        assert issues[0].severity == Severity.MAJOR
+
+    def test_review_code_with_ai_merges_issues(self, mock_ai_client):
+        """RED: 测试 review_code 合并 AI 和静态分析结果"""
+        mock_ai_client.generate_code.return_value = '''[
+            {
+                "severity": "INFO",
+                "category": "QUALITY",
+                "message": "AI 建议优化命名",
+                "line": 3,
+                "suggestion": "使用更具描述性的命名"
+            }
+        ]'''
+
+        code = '''
+def process():
+    API_KEY = "sk-12345"
+    eval(user_input)
+'''
+        reviewer = ReviewerAgent(ai_client=mock_ai_client)
+        result = reviewer.review_code(code, "auth.py")
+
+        # 应该包含 AI 问题和静态分析问题
+        assert len(result.issues) >= 3
+        ai_issues = [i for i in result.issues if "AI" in i.message]
+        assert len(ai_issues) >= 1
+
+    def test_review_code_with_ai_error_falls_back(self, mock_ai_client):
+        """RED: 测试 AI 审查异常时回退到静态分析"""
+        from harness.ai_client import AIClient
+        mock_ai_client.generate_code.side_effect = RuntimeError("API 错误")
+
+        code = '''
+API_KEY = "sk-12345"
+'''
+        reviewer = ReviewerAgent(ai_client=mock_ai_client)
+        result = reviewer.review_code(code, "config.py")
+
+        # 即使 AI 失败，也应该返回静态分析结果
+        assert result is not None
+        assert len(result.issues) >= 1
+        critical_issues = [i for i in result.issues if i.severity == Severity.CRITICAL]
+        assert len(critical_issues) >= 1
+
+    def test_ai_review_generate_code_called_with_prompt(self, mock_ai_client):
+        """RED: 测试 ai_review 正确调用 AIClient.generate_code"""
+        mock_ai_client.generate_code.return_value = "[]"
+
+        code = "def hello():\n    pass"
+        reviewer = ReviewerAgent(ai_client=mock_ai_client)
+        reviewer.ai_review(code, "hello.py")
+
+        # 验证 generate_code 被调用
+        mock_ai_client.generate_code.assert_called_once()
+        args, kwargs = mock_ai_client.generate_code.call_args
+        assert len(args) >= 2
+        # 第一个参数是 system prompt，第二个参数是 user prompt
+        assert "代码审查" in args[0] or "review" in args[0].lower()
+
+    def test_ai_review_handles_api_error(self, mock_ai_client):
+        """RED: 测试 AI 审查处理 API 异常"""
+        mock_ai_client.generate_code.side_effect = ValueError("API 密钥无效")
+
+        reviewer = ReviewerAgent(ai_client=mock_ai_client)
+        issues = reviewer.ai_review("code", "test.py")
+        assert issues == []
+
+    def test_ai_review_parses_code_block_json(self, mock_ai_client):
+        """RED: 测试 AI 返回 ```json 代码块格式的 JSON"""
+        mock_ai_client.generate_code.return_value = """```json
+[
+    {
+        "severity": "MAJOR",
+        "category": "QUALITY",
+        "message": "缺少类型注解",
+        "line": 5,
+        "suggestion": "添加类型注解"
+    }
+]
+```"""
+
+        reviewer = ReviewerAgent(ai_client=mock_ai_client)
+        issues = reviewer.ai_review("def foo():\n    pass", "test.py")
+        assert len(issues) == 1
+        assert issues[0].message == "缺少类型注解"
+
+    def test_ai_review_parses_non_array_response(self, mock_ai_client):
+        """RED: 测试 AI 返回非数组 JSON 时返回空列表"""
+        mock_ai_client.generate_code.return_value = '{"result": "no issues found"}'
+
+        reviewer = ReviewerAgent(ai_client=mock_ai_client)
+        issues = reviewer.ai_review("code", "test.py")
+        assert issues == []
+
+    def test_ai_review_parses_response_with_missing_message(self, mock_ai_client):
+        """RED: 测试 AI 返回缺少 message 字段的条目时跳过"""
+        mock_ai_client.generate_code.return_value = '''[
+            {"severity": "INFO", "category": "QUALITY", "line": 1},
+            {"severity": "MAJOR", "category": "QUALITY", "message": "有效问题", "line": 2}
+        ]'''
+
+        reviewer = ReviewerAgent(ai_client=mock_ai_client)
+        issues = reviewer.ai_review("code", "test.py")
+        assert len(issues) == 1
+        assert issues[0].message == "有效问题"
+
+    def test_ai_review_parses_unknown_category(self, mock_ai_client):
+        """RED: 测试 AI 返回未知类别时回退到 QUALITY"""
+        mock_ai_client.generate_code.return_value = '''[
+            {
+                "severity": "INFO",
+                "category": "UNKNOWN_CATEGORY",
+                "message": "测试未知类别",
+                "line": 1
+            }
+        ]'''
+
+        reviewer = ReviewerAgent(ai_client=mock_ai_client)
+        issues = reviewer.ai_review("code", "test.py")
+        assert len(issues) == 1
+        assert issues[0].category == Category.QUALITY

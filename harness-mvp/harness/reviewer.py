@@ -1,10 +1,34 @@
 """代码审查引擎 - Phase 4"""
+import json
 import re
-from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
 from harness.models import Issue, Severity, Category, Verdict, ReviewResult
+
+
+AI_REVIEW_SYSTEM_PROMPT = """你是一个专业的代码审查助手。你的职责是审查代码并报告问题。
+
+请分析代码中的问题，并以 JSON 数组格式返回结果。每个问题包含以下字段：
+
+- severity: 字符串，可选值 CRITICAL / MAJOR / MINOR / INFO
+- category: 字符串，可选值 SECURITY / PERFORMANCE / QUALITY / ACCESSIBILITY / AI_RESIDUALS
+- message: 字符串，问题描述
+- line: 整数，问题所在行号
+- suggestion: 字符串（可选），修复建议
+
+只返回 JSON 数组，不要包含其他内容。如果没有发现问题，返回空数组 []。
+
+示例：
+[
+    {
+        "severity": "CRITICAL",
+        "category": "SECURITY",
+        "message": "SQL 注入风险：使用字符串拼接构建查询",
+        "line": 10,
+        "suggestion": "使用参数化查询"
+    }
+]"""
 
 
 def determine_verdict(issues: List[Issue]) -> Verdict:
@@ -35,9 +59,13 @@ def determine_verdict(issues: List[Issue]) -> Verdict:
 class ReviewerAgent:
     """代码审查 Agent - 从 5 个观点审查代码"""
 
-    def __init__(self):
-        """初始化 Reviewer Agent"""
-        pass
+    def __init__(self, ai_client: Optional[Any] = None):
+        """初始化 Reviewer Agent
+
+        Args:
+            ai_client: AI 客户端实例，可选。提供后将启用 AI 代码审查。
+        """
+        self.ai_client = ai_client
 
     def review_code(self, code: str, file_path: str) -> ReviewResult:
         """审查代码
@@ -58,6 +86,10 @@ class ReviewerAgent:
         issues.extend(self.check_accessibility(code, file_path))
         issues.extend(self.check_ai_residuals(code, file_path))
 
+        # AI 审查（如有 AI 客户端）
+        ai_issues = self.ai_review(code, file_path)
+        issues.extend(ai_issues)
+
         # 判定 Verdict
         verdict = determine_verdict(issues)
 
@@ -65,6 +97,123 @@ class ReviewerAgent:
         summary = self._generate_summary(verdict, issues)
 
         return ReviewResult(verdict=verdict, issues=issues, summary=summary)
+
+    def ai_review(self, code: str, file_path: str) -> List[Issue]:
+        """使用 AI 审查代码
+
+        调用 AI 分析代码中的问题，返回结构化的问题列表。
+
+        Args:
+            code: 代码内容
+            file_path: 文件路径
+
+        Returns:
+            问题列表
+        """
+        if self.ai_client is None:
+            return []
+
+        user_prompt = f"""请审查以下代码文件：
+
+文件路径：{file_path}
+
+```python
+{code}
+```
+
+分析代码中的安全、性能、质量、可访问性和 AI 残留问题。"""
+
+        try:
+            response = self.ai_client.generate_code(
+                AI_REVIEW_SYSTEM_PROMPT,
+                user_prompt,
+                max_tokens=4096,
+            )
+        except Exception:
+            # AI 调用失败时静默回退
+            return []
+
+        if not response or not response.strip():
+            return []
+
+        return self._parse_ai_response(response, file_path)
+
+    def _parse_ai_response(self, response: str, file_path: str) -> List[Issue]:
+        """解析 AI 响应 JSON 为 Issue 列表
+
+        Args:
+            response: AI 返回的 JSON 字符串
+            file_path: 文件路径
+
+        Returns:
+            问题列表
+        """
+        # 尝试提取 JSON 数组（从 ```json 块中提取，或直接解析）
+        json_str = response.strip()
+        if json_str.startswith("```"):
+            # 移除代码块标记
+            for prefix in ["```json", "```"]:
+                if json_str.startswith(prefix):
+                    json_str = json_str[len(prefix):].strip()
+            if json_str.endswith("```"):
+                json_str = json_str[:-3].strip()
+
+        try:
+            data = json.loads(json_str)
+        except json.JSONDecodeError:
+            return []
+
+        if not isinstance(data, list):
+            return []
+
+        issues = []
+        for item in data:
+            if not isinstance(item, dict) or "message" not in item:
+                continue
+
+            severity = self._parse_severity(item.get("severity", "MAJOR"))
+            category = self._parse_category(item.get("category", "QUALITY"))
+
+            issues.append(Issue(
+                severity=severity,
+                category=category,
+                message=item["message"],
+                file=file_path,
+                line=item.get("line", 1),
+                suggestion=item.get("suggestion"),
+            ))
+
+        return issues
+
+    @staticmethod
+    def _parse_severity(value: str) -> Severity:
+        """解析严重级别字符串
+
+        Args:
+            value: 严重级别字符串
+
+        Returns:
+            Severity 枚举值
+        """
+        try:
+            return Severity.from_string(value)
+        except (ValueError, KeyError):
+            return Severity.MAJOR
+
+    @staticmethod
+    def _parse_category(value: str) -> Category:
+        """解析问题类别字符串
+
+        Args:
+            value: 类别字符串
+
+        Returns:
+            Category 枚举值
+        """
+        try:
+            return Category.from_string(value)
+        except (ValueError, KeyError):
+            return Category.QUALITY
 
     def _generate_summary(self, verdict: Verdict, issues: List[Issue]) -> str:
         """生成审查总结
