@@ -40,13 +40,28 @@ class AIClient:
                 "缺少 anthropic 包，请运行: pip install anthropic"
             )
 
-        client = anthropic.Anthropic(api_key=self.api_key)
-        message = client.messages.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
-        )
+        try:
+            client = anthropic.Anthropic(api_key=self.api_key)
+            message = client.messages.create(
+                model=self.model,
+                max_tokens=max_tokens,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_prompt}],
+            )
+        except anthropic.AuthenticationError:
+            raise ValueError(
+                "Anthropic API 认证失败，请检查 ANTHROPIC_API_KEY 是否有效"
+            )
+        except anthropic.RateLimitError:
+            raise RuntimeError("API 请求超限，请稍后重试")
+        except anthropic.APIConnectionError:
+            raise RuntimeError("无法连接到 Anthropic API，请检查网络连接")
+        except anthropic.APITimeoutError:
+            raise RuntimeError("Anthropic API 请求超时，请稍后重试")
+        except anthropic.BadRequestError as e:
+            raise ValueError(f"API 请求参数错误: {e.message}")
+        except anthropic.APIError as e:
+            raise RuntimeError(f"Anthropic API 错误: {e.message}")
 
         content_parts: List[str] = []
         for block in message.content:
