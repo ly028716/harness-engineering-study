@@ -7,6 +7,7 @@ from harness.store import TaskStore
 from harness.history import HistoryManager
 from harness.executor import TaskExecutionService, select_execution_mode, ExecutionMode
 from harness.reviewer import ReviewerAgent, ReviewResult
+from harness.config import ConfigManager, Settings
 
 
 def get_harness_dir() -> Path:
@@ -248,6 +249,60 @@ def statistics():
     click.echo(f"已完成 (DONE): {stats['done']}")
     click.echo(f"被阻塞 (BLOCKED): {stats['blocked']}")
     click.echo(f"\n进度：{stats['progress_percent']}%")
+
+
+# ===== Config 命令组 =====
+
+@main.group()
+def config():
+    """配置管理命令"""
+    pass
+
+
+@config.command()
+def show():
+    """显示当前配置"""
+    harness_dir = get_harness_dir()
+
+    if not harness_dir.exists():
+        click.echo("错误：未找到 .harness 目录。请先创建计划。")
+        return
+
+    manager = ConfigManager(harness_dir)
+    settings = manager.load_with_env_overrides()
+
+    click.echo("\n=== 当前配置 ===\n")
+    click.echo(f"AI 模型：{settings.ai_model}")
+    click.echo(f"执行模式：{settings.execution_mode.value}")
+    click.echo(f"最大 Worker 数：{settings.max_workers}")
+
+    api_status = "已设置" if settings.api_key else "未设置"
+    click.echo(f"API 密钥：{api_status}")
+
+
+@config.command()
+@click.argument('key')
+@click.argument('value')
+def set(key: str, value: str):
+    """更新配置项"""
+    harness_dir = get_harness_dir()
+
+    if not harness_dir.exists():
+        click.echo("错误：未找到 .harness 目录。请先创建计划。")
+        return
+
+    manager = ConfigManager(harness_dir)
+    manager.update(**{key: value})
+    click.echo(f"已更新 {key} = {value}")
+
+
+@config.command()
+def init():
+    """初始化默认配置"""
+    harness_dir = get_harness_dir()
+    manager = ConfigManager(harness_dir)
+    manager.reset()
+    click.echo("已创建默认配置。")
 
 
 # ===== Work 命令组 (Phase 3) =====

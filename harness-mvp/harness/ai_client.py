@@ -1,5 +1,6 @@
 """AI 客户端 - Anthropic SDK 封装"""
 import os
+from pathlib import Path
 from typing import List, Optional
 
 try:
@@ -11,13 +12,23 @@ except ImportError:
 class AIClient:
     """封装 Anthropic SDK 调用"""
 
-    def __init__(self, api_key: Optional[str] = None, model: str = "claude-sonnet-4-20250514"):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
         if not self.api_key:
             raise ValueError(
                 "缺少 Anthropic API 密钥。请设置 ANTHROPIC_API_KEY 环境变量。"
             )
-        self.model = model
+        self.model = model or self._load_model_from_config()
+
+    @staticmethod
+    def _load_model_from_config() -> str:
+        """从配置加载 AI 模型"""
+        try:
+            from harness.config import load_config
+            config = load_config(Path.cwd() / ".harness")
+            return config.ai_model
+        except Exception:
+            return "claude-sonnet-4-20250514"
 
     def generate_code(
         self,

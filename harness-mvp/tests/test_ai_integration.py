@@ -105,6 +105,71 @@ class TestPrompts:
         assert "## 验收标准" not in prompt
 
 
+class TestAIClientConfigIntegration:
+    """测试 AIClient 配置集成"""
+
+    def test_ai_client_uses_config_model(self):
+        """RED: 测试 AIClient 从 config.json 读取模型"""
+        import tempfile
+        import json
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            harness_dir = Path(tmpdir) / ".harness"
+            harness_dir.mkdir()
+            config_file = harness_dir / "config.json"
+            config_file.write_text(json.dumps({
+                "ai_model": "config-model-name",
+            }), encoding='utf-8')
+
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}, clear=True):
+                    client = AIClient()
+                    assert client.model == "config-model-name"
+            finally:
+                os.chdir(old_cwd)
+
+    def test_ai_client_config_model_fallback_default(self):
+        """RED: 测试无配置时使用默认模型"""
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}, clear=True):
+                    client = AIClient()
+                    assert client.model == "claude-sonnet-4-20250514"
+            finally:
+                os.chdir(old_cwd)
+
+    def test_ai_client_explicit_model_overrides_config(self):
+        """RED: 测试显式传入的 model 覆盖配置"""
+        import tempfile
+        import json
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            harness_dir = Path(tmpdir) / ".harness"
+            harness_dir.mkdir()
+            config_file = harness_dir / "config.json"
+            config_file.write_text(json.dumps({
+                "ai_model": "config-model",
+            }), encoding='utf-8')
+
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}, clear=True):
+                    client = AIClient(model="explicit-model")
+                    assert client.model == "explicit-model"
+            finally:
+                os.chdir(old_cwd)
+
+
 class TestWorkerAgentWithAI:
     """测试 WorkerAgent AI 集成"""
 
