@@ -1,7 +1,9 @@
-"""Planner Agent - Phase 2"""
+"""Planner Agent - Phase 2 + AI 集成"""
+import json
 import re
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 from harness.models import Task, Priority
+from harness.prompts import AI_PLAN_SYSTEM_PROMPT
 
 
 class PlanGenerator:
@@ -187,9 +189,14 @@ class PlanGenerator:
 class PlannerAgent:
     """Planner Agent - 计划生成和管理"""
 
-    def __init__(self):
-        """初始化 Planner Agent"""
+    def __init__(self, ai_client: Optional[Any] = None):
+        """初始化 Planner Agent
+
+        Args:
+            ai_client: AI 客户端实例，可选。提供后将启用 AI 计划生成。
+        """
         self.generator = PlanGenerator()
+        self.ai_client = ai_client
 
     def collect_requirements(
         self,
@@ -360,3 +367,65 @@ class PlannerAgent:
             tasks.append(task)
 
         return tasks
+
+    def ai_plan(self, goal: str, context: str = "") -> Optional[Dict[str, Any]]:
+        """使用 AI 生成计划
+
+        调用 AI 分析用户需求，生成结构化的任务计划。
+
+        Args:
+            goal: 项目目标
+            context: 额外的上下文信息（技术栈、约束等）
+
+        Returns:
+            计划字典，包含 goal 和 tasks，失败时返回 None
+        """
+        if self.ai_client is None:
+            return None
+
+        parts = [f"# 项目目标\n{goal}"]
+        if context:
+            parts.append(f"## 额外上下文\n{context}")
+
+        user_prompt = "\n\n".join(parts)
+
+        try:
+            response = self.ai_client.generate_code(
+                AI_PLAN_SYSTEM_PROMPT,
+                user_prompt,
+                max_tokens=4096,
+            )
+        except Exception:
+            return None
+
+        if not response or not response.strip():
+            return None
+
+        return self._parse_ai_plan_response(response)
+
+    def _parse_ai_plan_response(self, response: str) -> Optional[Dict[str, Any]]:
+        """解析 AI 响应 JSON 为计划字典
+
+        Args:
+            response: AI 返回的 JSON 字符串
+
+        Returns:
+            计划字典，解析失败时返回 None
+        """
+        json_str = response.strip()
+        if json_str.startswith("```"):
+            for prefix in ["```json", "```"]:
+                if json_str.startswith(prefix):
+                    json_str = json_str[len(prefix):].strip()
+            if json_str.endswith("```"):
+                json_str = json_str[:-3].strip()
+
+        try:
+            data = json.loads(json_str)
+        except json.JSONDecodeError:
+            return None
+
+        if not isinstance(data, dict) or "tasks" not in data:
+            return None
+
+        return data

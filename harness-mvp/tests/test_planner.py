@@ -169,3 +169,181 @@ class TestPlannerAgent:
 
         # 循环依赖应该被检测出来
         assert is_valid is False or len(issues) > 0
+
+
+class TestPlannerAIIntegration:
+    """测试 AI 驱动的计划生成集成"""
+
+    @pytest.fixture
+    def mock_ai_client(self):
+        """创建模拟的 AIClient"""
+        from unittest.mock import MagicMock
+        from harness.ai_client import AIClient
+        client = MagicMock(spec=AIClient)
+        return client
+
+    def test_ai_plan_generates_tasks(self, mock_ai_client):
+        """RED: 测试 AI 计划生成任务列表"""
+        mock_ai_client.generate_code.return_value = '''{
+            "goal": "实现用户认证系统",
+            "tasks": [
+                {
+                    "id": 1,
+                    "title": "用户注册",
+                    "description": "支持邮箱和密码注册",
+                    "priority": "REQUIRED",
+                    "estimated_effort": 3,
+                    "dependencies": [],
+                    "acceptance_criteria": ["注册成功返回 token", "密码加密存储"]
+                },
+                {
+                    "id": 2,
+                    "title": "用户登录",
+                    "description": "支持邮箱密码登录",
+                    "priority": "REQUIRED",
+                    "estimated_effort": 2,
+                    "dependencies": [1],
+                    "acceptance_criteria": ["登录验证通过", "错误密码返回 401"]
+                }
+            ]
+        }'''
+
+        agent = PlannerAgent(ai_client=mock_ai_client)
+        plan = agent.ai_plan("实现用户认证系统")
+
+        assert plan is not None
+        assert "goal" in plan
+        assert "tasks" in plan
+        assert len(plan["tasks"]) == 2
+
+        task1 = plan["tasks"][0]
+        assert task1["id"] == 1
+        assert task1["title"] == "用户注册"
+        assert task1["priority"] == "REQUIRED"
+        assert task1["dependencies"] == []
+
+    def test_ai_plan_no_client_returns_none(self):
+        """RED: 测试无 AIClient 时返回 None"""
+        agent = PlannerAgent()
+        plan = agent.ai_plan("实现用户认证系统")
+        assert plan is None
+
+    def test_ai_plan_handles_invalid_json(self, mock_ai_client):
+        """RED: 测试 AI 返回无效 JSON 时返回 None"""
+        mock_ai_client.generate_code.return_value = "这不是有效的 JSON 响应"
+
+        agent = PlannerAgent(ai_client=mock_ai_client)
+        plan = agent.ai_plan("实现用户认证系统")
+        assert plan is None
+
+    def test_ai_plan_handles_empty_response(self, mock_ai_client):
+        """RED: 测试 AI 返回空字符串"""
+        mock_ai_client.generate_code.return_value = ""
+
+        agent = PlannerAgent(ai_client=mock_ai_client)
+        plan = agent.ai_plan("实现用户认证系统")
+        assert plan is None
+
+    def test_ai_plan_missing_tasks_field(self, mock_ai_client):
+        """RED: 测试 AI 返回缺少 tasks 字段的 JSON"""
+        mock_ai_client.generate_code.return_value = '{"goal": "test", "other": "data"}'
+
+        agent = PlannerAgent(ai_client=mock_ai_client)
+        plan = agent.ai_plan("test")
+        assert plan is None
+
+    def test_ai_plan_empty_tasks_array(self, mock_ai_client):
+        """RED: 测试 AI 返回空任务数组"""
+        mock_ai_client.generate_code.return_value = '{"goal": "test", "tasks": []}'
+
+        agent = PlannerAgent(ai_client=mock_ai_client)
+        plan = agent.ai_plan("test")
+        assert plan is not None
+        assert len(plan["tasks"]) == 0
+
+    def test_ai_plan_with_context(self, mock_ai_client):
+        """RED: 测试 AI 计划使用上下文信息"""
+        mock_ai_client.generate_code.return_value = '{"goal": "test", "tasks": []}'
+
+        agent = PlannerAgent(ai_client=mock_ai_client)
+        agent.ai_plan("test", context="Python 项目，使用 FastAPI")
+
+        # 验证 context 被传递到 prompt 中
+        args, kwargs = mock_ai_client.generate_code.call_args
+        user_prompt = args[1]
+        assert "FastAPI" in user_prompt
+
+    def test_ai_plan_generate_code_called_with_prompt(self, mock_ai_client):
+        """RED: 测试 ai_plan 正确调用 AIClient.generate_code"""
+        mock_ai_client.generate_code.return_value = '{"goal": "test", "tasks": []}'
+
+        agent = PlannerAgent(ai_client=mock_ai_client)
+        agent.ai_plan("实现用户认证系统")
+
+        mock_ai_client.generate_code.assert_called_once()
+        args, kwargs = mock_ai_client.generate_code.call_args
+        assert len(args) >= 2
+        # system prompt 应包含计划生成指令
+        assert "计划" in args[0] or "plan" in args[0].lower()
+
+    def test_ai_plan_with_dependencies(self, mock_ai_client):
+        """RED: 测试 AI 计划中的依赖关系"""
+        mock_ai_client.generate_code.return_value = '''{
+            "goal": "构建博客系统",
+            "tasks": [
+                {"id": 1, "title": "数据库模型", "description": "定义数据模型", "priority": "REQUIRED", "estimated_effort": 3, "dependencies": []},
+                {"id": 2, "title": "API 端点", "description": "实现 CRUD 接口", "priority": "REQUIRED", "estimated_effort": 4, "dependencies": [1]},
+                {"id": 3, "title": "前端页面", "description": "实现博客前端", "priority": "RECOMMENDED", "estimated_effort": 5, "dependencies": [2]}
+            ]
+        }'''
+
+        agent = PlannerAgent(ai_client=mock_ai_client)
+        plan = agent.ai_plan("构建博客系统")
+
+        assert plan is not None
+        task2 = plan["tasks"][1]
+        assert 1 in task2["dependencies"]
+        task3 = plan["tasks"][2]
+        assert 2 in task3["dependencies"]
+
+    def test_ai_plan_creates_task_objects(self, mock_ai_client):
+        """RED: 测试 AI 计划可转换为 Task 对象"""
+        mock_ai_client.generate_code.return_value = '''{
+            "goal": "测试项目",
+            "tasks": [
+                {"id": 1, "title": "任务一", "description": "描述一", "priority": "REQUIRED", "estimated_effort": 2, "dependencies": []}
+            ]
+        }'''
+
+        agent = PlannerAgent(ai_client=mock_ai_client)
+        plan = agent.ai_plan("测试项目")
+        tasks = agent.create_tasks(plan)
+
+        assert len(tasks) == 1
+        assert tasks[0].id == 1
+        assert tasks[0].title == "任务一"
+        assert tasks[0].priority.value == "REQUIRED"
+
+    def test_ai_plan_handles_api_error(self, mock_ai_client):
+        """RED: 测试 AI 计划处理 API 异常"""
+        mock_ai_client.generate_code.side_effect = RuntimeError("API 错误")
+
+        agent = PlannerAgent(ai_client=mock_ai_client)
+        plan = agent.ai_plan("实现用户认证系统")
+        assert plan is None
+
+    def test_ai_plan_code_block_response(self, mock_ai_client):
+        """RED: 测试 AI 返回 ```json 代码块格式"""
+        mock_ai_client.generate_code.return_value = '''```json
+{
+    "goal": "测试项目",
+    "tasks": [
+        {"id": 1, "title": "任务一", "description": "描述", "priority": "REQUIRED", "estimated_effort": 1, "dependencies": []}
+    ]
+}
+```'''
+
+        agent = PlannerAgent(ai_client=mock_ai_client)
+        plan = agent.ai_plan("测试项目")
+        assert plan is not None
+        assert len(plan["tasks"]) == 1
