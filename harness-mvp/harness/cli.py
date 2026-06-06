@@ -202,36 +202,92 @@ def sync():
 
 
 @plan.command()
-@click.option('--title', '-t', help="任务标题")
+@click.option('--template', '-t', help="模板名称 (feature, bugfix, refactor)")
+@click.option('--var', 'variables', multiple=True, help="变量值 (格式: key=value)")
+@click.option('--title', help="任务标题")
 @click.option('--description', '-d', help="任务描述")
 @click.option('--priority', '-p', type=click.Choice(['REQUIRED', 'RECOMMENDED', 'OPTIONAL'], case_sensitive=False), default='REQUIRED')
 @click.option('--estimate', '-e', type=int, default=1, help="估算工作量 (1-5)")
-def add(title: str, description: str, priority: str, estimate: int):
-    """添加新任务（交互式或参数式）"""
+def add(template: str, variables, title: str, description: str, priority: str, estimate: int):
+    """添加新任务（支持模板或手动输入）"""
     harness_dir = get_harness_dir()
     store = TaskStore(harness_dir)
     history = HistoryManager(harness_dir)
 
-    # 如果没有提供参数，使用交互模式
-    if not title:
-        title = click.prompt("任务标题")
-        description = click.prompt("任务描述（可选）", default="")
-        priority = click.prompt("优先级", type=click.Choice(['REQUIRED', 'RECOMMENDED', 'OPTIONAL']), default='REQUIRED')
-        estimate = click.prompt("估算工作量 (1-5)", type=int, default=1)
+    if template:
+        # Template mode - Requirements 3.3.1
+        from harness.template_loader import TemplateStore
+        from harness.templates import (
+            TemplateEngine, 
+            TemplateNotFoundError, 
+            TemplateValidationError, 
+            MissingVariableError
+        )
+        
+        # Initialize stores
+        template_store = TemplateStore(harness_dir)
+        engine = TemplateEngine(template_store, store)
+        
+        # Parse --var arguments into dict (format: key=value)
+        var_dict = {}
+        for var in variables:
+            if '=' not in var:
+                click.echo(f"❌ 错误: 无效的变量格式 '{var}'，应为 key=value")
+                return
+            key, value = var.split('=', 1)
+            var_dict[key.strip()] = value.strip()
+        
+        # Interactive mode when no --var arguments provided
+        # Non-interactive mode when --var arguments are provided
+        interactive = len(var_dict) == 0
+        
+        try:
+            # Call engine.create_task_from_template() with interactive mode
+            task = engine.create_task_from_template(
+                template,
+                variables=var_dict,
+                interactive=interactive
+            )
+            store.add_task(task)
+            history.log_task_created(task)
+            
+            # Display success message with task ID, title, priority, and effort
+            click.echo(f"\n✅ 任务创建成功! (ID: {task.id})")
+            click.echo(f"   标题: {task.title}")
+            click.echo(f"   优先级: {task.priority.value}")
+            click.echo(f"   工作量: {task.estimated_effort}")
+            
+        except TemplateNotFoundError as e:
+            # Handle TemplateNotFoundError by displaying available templates
+            click.echo(f"❌ 错误: {e}")
+            click.echo("\n可用模板:")
+            for name, tmpl, is_custom in template_store.list_templates():
+                suffix = " (自定义)" if is_custom else ""
+                click.echo(f"  - {name}{suffix}")
+        except (TemplateValidationError, MissingVariableError) as e:
+            # Handle TemplateValidationError and MissingVariableError with user-friendly messages
+            click.echo(f"❌ 错误: {e}")
+    else:
+        # Original manual task creation (maintain backward compatibility)
+        if not title:
+            title = click.prompt("任务标题")
+            description = click.prompt("任务描述（可选）", default="")
+            priority = click.prompt("优先级", type=click.Choice(['REQUIRED', 'RECOMMENDED', 'OPTIONAL']), default='REQUIRED')
+            estimate = click.prompt("估算工作量 (1-5)", type=int, default=1)
 
-    task_id = store.get_next_task_id()
-    task = Task(
-        id=task_id,
-        title=title,
-        description=description,
-        priority=Priority.from_string(priority),
-        estimated_effort=estimate
-    )
+        task_id = store.get_next_task_id()
+        task = Task(
+            id=task_id,
+            title=title,
+            description=description,
+            priority=Priority.from_string(priority),
+            estimated_effort=estimate
+        )
 
-    store.add_task(task)
-    history.log_task_created(task)
+        store.add_task(task)
+        history.log_task_created(task)
 
-    click.echo(f"已添加任务 #{task_id}: {task.title}")
+        click.echo(f"已添加任务 #{task_id}: {task.title}")
 
 
 @plan.command("stats")
@@ -249,6 +305,123 @@ def statistics():
     click.echo(f"已完成 (DONE): {stats['done']}")
     click.echo(f"被阻塞 (BLOCKED): {stats['blocked']}")
     click.echo(f"\n进度：{stats['progress_percent']}%")
+
+
+# ===== Template 命令组 =====
+
+@main.group()
+def template():
+    """模板管理命令"""
+    pass
+
+
+@template.command('list')
+def list_templates():
+    """列出所有可用模板
+    
+    显示所有内置和自定义模板，包括名称、描述预览、优先级和工作量。
+    自定义模板会标记 "(自定义)" 后缀。
+    
+    Requirements: 3.3.2
+    """
+    harness_dir = get_harness_dir()
+    
+    # Import here to avoid circular dependencies
+    from harness.template_loader import TemplateStore
+    
+    # Initialize TemplateStore
+    template_store = TemplateStore(harness_dir)
+    
+    # Call template_store.list_templates()
+    templates = template_store.list_templates()
+    
+    if not templates:
+        click.echo("没有可用的模板。")
+        return
+    
+    # Display header
+    click.echo("\n可用模板:")
+    
+    # Display each template with name, description preview, priority, effort
+    for name, tmpl, is_custom in templates:
+        # Mark custom templates with "(自定义)" suffix
+        suffix = " (自定义)" if is_custom else ""
+        
+        # Create a simple description based on template type
+        desc_map = {
+            "feature": "功能开发任务",
+            "bugfix": "Bug修复任务",
+            "refactor": "代码重构任务"
+        }
+        
+        # Use mapped description if available, otherwise use a generic description
+        if name in desc_map:
+            desc_preview = desc_map[name]
+        else:
+            # For custom templates, use a generic description
+            desc_preview = "自定义模板"
+        
+        # Display template info (multi-line format)
+        click.echo(f"  {name}{suffix}")
+        click.echo(f"    {desc_preview}")
+        click.echo(f"    优先级: {tmpl.priority.value}, 工作量: {tmpl.estimated_effort}")
+        click.echo()  # Empty line between templates
+    
+    # Display usage hint at the end
+    click.echo("\n使用方式: harness plan add --template <template_name>")
+
+
+@template.command('show')
+@click.argument('template_name')
+def show_template(template_name: str):
+    """显示模板详情
+    
+    显示指定模板的完整定义，包括元数据和所有变量提示。
+    
+    Args:
+        template_name: 要查看的模板名称
+        
+    Requirements: 3.3.3
+    """
+    harness_dir = get_harness_dir()
+    
+    # Import here to avoid circular dependencies
+    from harness.template_loader import TemplateStore
+    
+    # Initialize TemplateStore
+    template_store = TemplateStore(harness_dir)
+    
+    # Call template_store.get_template(template_name)
+    template = template_store.get_template(template_name)
+    
+    # Handle template not found with friendly error message
+    if not template:
+        click.echo(f"模板 '{template_name}' 不存在。")
+        return
+    
+    # Display template metadata: name, title, priority, effort, description
+    click.echo(f"\n=== 模板: {template.name} ===\n")
+    click.echo(f"标题: {template.title}")
+    click.echo(f"优先级: {template.priority.value}")
+    click.echo(f"工作量: {template.estimated_effort}\n")
+    click.echo("描述:")
+    click.echo(template.description)
+    click.echo()
+    
+    # Display prompt details: key, required/optional, multiline, default value, question
+    if template.prompts:
+        click.echo("变量:")
+        for prompt in template.prompts:
+            # Format: key (required/optional) [multiline if applicable]: question [default: value]
+            required_text = "必填" if prompt.required else "可选"
+            multiline_text = "（多行）" if prompt.multiline else ""
+            
+            # Build the prompt line
+            click.echo(f"  - {prompt.key} ({required_text}){multiline_text}: {prompt.question}")
+            
+            # Show default value if present
+            if prompt.default:
+                click.echo(f"    默认值: {prompt.default}")
 
 
 # ===== Config 命令组 =====
