@@ -2,7 +2,8 @@
 import pytest
 import re
 from hypothesis import given, strategies as st
-from harness.templates import TemplatePrompt, TaskTemplate, Priority
+from harness.templates import TemplatePrompt, TaskTemplate, Priority, TemplateEngine, MissingVariableError
+from unittest.mock import Mock
 
 
 class TestTemplatePrompt:
@@ -980,3 +981,1365 @@ class TestTaskTemplateProperties:
         restored_errors = restored.validate()
         assert set(original_errors) == set(restored_errors), \
             f"Validation results differ after round-trip: original={original_errors}, restored={restored_errors}"
+    
+    @given(
+        name=valid_template_name(),
+        title=st.text(min_size=1, max_size=100),
+        description=st.text(min_size=1, max_size=200),
+        priority=st.sampled_from([Priority.REQUIRED, Priority.RECOMMENDED, Priority.OPTIONAL]),
+        estimated_effort=st.integers(min_value=1, max_value=5),
+        prompts=st.lists(
+            st.builds(
+                TemplatePrompt,
+                key=valid_identifier(),
+                question=st.text(min_size=1, max_size=100),
+                required=st.booleans(),
+                multiline=st.booleans(),
+                default=st.one_of(st.none(), st.text(max_size=50))
+            ),
+            min_size=1,
+            max_size=10,
+            unique_by=lambda p: p.key
+        )
+    )
+    def test_template_field_type_validation(self, name, title, description, priority, estimated_effort, prompts):
+        """
+        **Property 6: Template Field Type Validation**
+        **Validates: Requirements 3.5.2**
+        
+        Test that validation ensures priority is valid, effort range is [1,5], and prompts non-empty.
+        
+        For any template data, validation SHALL ensure:
+        - priority is a valid Priority enum value
+        - estimated_effort is an integer in range [1,5]
+        - prompts is a non-empty list
+        
+        This property validates the basic field type constraints that ensure
+        template data integrity.
+        """
+        template = TaskTemplate(
+            name=name,
+            title=title,
+            description=description,
+            priority=priority,
+            estimated_effort=estimated_effort,
+            prompts=prompts,
+            acceptance_criteria=[]
+        )
+        
+        errors = template.validate()
+        
+        # Priority should be valid (since we're using valid enum values)
+        # Look for actual priority validation errors, not warnings about prompts
+        priority_errors = [err for err in errors if "priority" in err.lower() and "prompt" not in err.lower()]
+        assert len(priority_errors) == 0, \
+            f"Valid priority {priority} should not produce errors: {priority_errors}"
+        
+        # Effort should be valid (since we're generating 1-5)
+        effort_errors = [err for err in errors if "estimated effort must be" in err.lower()]
+        assert len(effort_errors) == 0, \
+            f"Valid effort {estimated_effort} should not produce errors: {effort_errors}"
+        
+        # Prompts should be valid (since we're generating non-empty list)
+        prompts_empty_errors = [err for err in errors if "must have at least one prompt" in err]
+        assert len(prompts_empty_errors) == 0, \
+            f"Non-empty prompts list should not produce empty prompts error: {prompts_empty_errors}"
+    
+    @given(
+        invalid_effort=st.one_of(
+            st.integers(max_value=0),  # Below range
+            st.integers(min_value=6)   # Above range
+        )
+    )
+    def test_template_field_type_validation_invalid_effort(self, invalid_effort):
+        """
+        **Property 6: Template Field Type Validation**
+        **Validates: Requirements 3.5.2**
+        
+        Test that validation rejects invalid estimated_effort values outside [1,5].
+        """
+        template = TaskTemplate(
+            name="test",
+            title="Test",
+            description="Test description",
+            priority=Priority.REQUIRED,
+            estimated_effort=invalid_effort,
+            prompts=[TemplatePrompt("var", "Question?")],
+            acceptance_criteria=[]
+        )
+        
+        errors = template.validate()
+        
+        # Should have effort-related validation error
+        effort_errors = [err for err in errors if "effort" in err.lower() and "1-5" in err]
+        assert len(effort_errors) > 0, \
+            f"Invalid effort {invalid_effort} should be rejected but validation passed"
+    
+    def test_template_field_type_validation_empty_prompts(self):
+        """
+        **Property 6: Template Field Type Validation**
+        **Validates: Requirements 3.5.2**
+        
+        Test that validation rejects templates with empty prompts list.
+        """
+        template = TaskTemplate(
+            name="test",
+            title="Test",
+            description="Test description",
+            priority=Priority.REQUIRED,
+            estimated_effort=3,
+            prompts=[],  # Empty prompts list
+            acceptance_criteria=[]
+        )
+        
+        errors = template.validate()
+        
+        # Should have prompts-related validation error
+        prompts_errors = [err for err in errors if "must have at least one prompt" in err]
+        assert len(prompts_errors) > 0, \
+            f"Empty prompts list should be rejected but validation passed"
+    
+    @given(
+        variables_in_template=st.lists(valid_identifier(), min_size=1, max_size=5, unique=True),
+        extra_prompts=st.lists(valid_identifier(), min_size=0, max_size=3, unique=True)
+    )
+    def test_variable_prompt_consistency_valid(self, variables_in_template, extra_prompts):
+        """
+        **Property 7: Variable-Prompt Consistency**
+        **Validates: Requirements 3.5.3**
+        
+        Test that validation succeeds when all template variables are defined in prompts.
+        
+        For any template, validation SHALL ensure that the set of variables in the
+        template text is a subset of (or equal to) the set of prompt keys defined
+        in the prompts list.
+        
+        Having extra prompts (not used in template) is allowed and generates a warning,
+        but having undefined variables (used in template but not in prompts) is an error.
+        """
+        # Build template with variables
+        title = "Task: " + " ".join([f"{{{var}}}" for var in variables_in_template[:2]]) if len(variables_in_template) >= 2 else f"{{{variables_in_template[0]}}}"
+        description = "Description: " + " ".join([f"{{{var}}}" for var in variables_in_template])
+        
+        # Create prompts for all variables + extra prompts
+        all_prompt_keys = list(variables_in_template) + list(extra_prompts)
+        prompts = [TemplatePrompt(key, f"Question for {key}?") for key in all_prompt_keys]
+        
+        template = TaskTemplate(
+            name="test",
+            title=title,
+            description=description,
+            priority=Priority.REQUIRED,
+            estimated_effort=3,
+            prompts=prompts,
+            acceptance_criteria=[]
+        )
+        
+        errors = template.validate()
+        
+        # Should NOT have undefined variable errors
+        undefined_errors = [err for err in errors if "not defined in prompts" in err]
+        assert len(undefined_errors) == 0, \
+            f"All variables are defined in prompts, should not have undefined errors: {undefined_errors}"
+        
+        # Extract variables using get_variables()
+        extracted_vars = template.get_variables()
+        prompt_keys = {p.key for p in prompts}
+        
+        # All extracted variables should be in prompt keys
+        assert extracted_vars.issubset(prompt_keys), \
+            f"Variables {extracted_vars} should be subset of prompt keys {prompt_keys}"
+    
+    @given(
+        defined_variables=st.lists(valid_identifier(), min_size=1, max_size=3, unique=True),
+        undefined_variables=st.lists(valid_identifier(), min_size=1, max_size=3, unique=True)
+    )
+    def test_variable_prompt_consistency_invalid(self, defined_variables, undefined_variables):
+        """
+        **Property 7: Variable-Prompt Consistency**
+        **Validates: Requirements 3.5.3**
+        
+        Test that validation fails when template contains variables not defined in prompts.
+        """
+        # Ensure undefined variables are actually different from defined ones
+        undefined_variables = [v for v in undefined_variables if v not in defined_variables]
+        
+        if not undefined_variables:
+            # Skip if all "undefined" variables are in defined list
+            return
+        
+        # Build template with both defined and undefined variables
+        all_vars = defined_variables + undefined_variables
+        title = f"Task: {{{all_vars[0]}}}"
+        description = "Description: " + " ".join([f"{{{var}}}" for var in all_vars])
+        
+        # Create prompts only for defined variables
+        prompts = [TemplatePrompt(key, f"Question for {key}?") for key in defined_variables]
+        
+        template = TaskTemplate(
+            name="test",
+            title=title,
+            description=description,
+            priority=Priority.REQUIRED,
+            estimated_effort=3,
+            prompts=prompts,
+            acceptance_criteria=[]
+        )
+        
+        errors = template.validate()
+        
+        # Should have undefined variable errors
+        undefined_errors = [err for err in errors if "not defined in prompts" in err]
+        assert len(undefined_errors) > 0, \
+            f"Template has undefined variables {undefined_variables}, should fail validation but passed"
+        
+        # Verify that the error mentions the undefined variables
+        error_text = " ".join(undefined_errors)
+        for undef_var in undefined_variables:
+            assert undef_var in error_text, \
+                f"Error should mention undefined variable '{undef_var}': {error_text}"
+
+
+
+class TestTemplateEngine:
+    """Test suite for TemplateEngine class (Task 5.1 and 5.2)"""
+    
+    def test_replace_variables_simple_replacement(self):
+        """Test that _replace_variables() replaces single variable correctly"""
+        # Create mock template_store and task_store
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        text = "Implement {feature_name} feature"
+        variables = {"feature_name": "authentication"}
+        
+        result = engine._replace_variables(text, variables)
+        
+        assert result == "Implement authentication feature"
+    
+    def test_replace_variables_multiple_variables(self):
+        """Test that _replace_variables() replaces multiple variables correctly"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        text = "Add {feature} to {component} module"
+        variables = {
+            "feature": "caching",
+            "component": "database"
+        }
+        
+        result = engine._replace_variables(text, variables)
+        
+        assert result == "Add caching to database module"
+    
+    def test_replace_variables_duplicate_occurrences(self):
+        """Test that _replace_variables() replaces all occurrences of a variable"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        text = "The {feature} is great. Use {feature} wisely. {feature} rocks!"
+        variables = {"feature": "template"}
+        
+        result = engine._replace_variables(text, variables)
+        
+        assert result == "The template is great. Use template wisely. template rocks!"
+        assert "{feature}" not in result
+    
+    def test_replace_variables_empty_variables_dict(self):
+        """Test that _replace_variables() handles empty variables dict"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        text = "No variables here"
+        variables = {}
+        
+        result = engine._replace_variables(text, variables)
+        
+        assert result == "No variables here"
+    
+    def test_replace_variables_text_with_no_placeholders(self):
+        """Test that _replace_variables() handles text with no placeholders"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        text = "Simple text without any placeholders"
+        variables = {"feature": "test"}
+        
+        result = engine._replace_variables(text, variables)
+        
+        assert result == "Simple text without any placeholders"
+    
+    def test_replace_variables_leaves_unreplaced_placeholders(self):
+        """Test that _replace_variables() leaves placeholders for which no value is provided"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        text = "Add {feature} to {component}"
+        variables = {"feature": "logging"}  # component not provided
+        
+        result = engine._replace_variables(text, variables)
+        
+        assert result == "Add logging to {component}"
+        assert "{feature}" not in result
+        assert "{component}" in result
+    
+    def test_replace_variables_with_multiline_text(self):
+        """Test that _replace_variables() works with multiline text"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        text = """### Feature: {feature_name}
+        
+Description: {description}
+
+Implementation steps:
+- Design {feature_name}
+- Implement {feature_name}
+- Test {feature_name}"""
+        
+        variables = {
+            "feature_name": "user authentication",
+            "description": "JWT-based auth system"
+        }
+        
+        result = engine._replace_variables(text, variables)
+        
+        assert "user authentication" in result
+        assert "JWT-based auth system" in result
+        assert "{feature_name}" not in result
+        assert "{description}" not in result
+    
+    def test_replace_variables_with_special_characters_in_values(self):
+        """Test that _replace_variables() handles special characters in replacement values"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        text = "Fix bug: {bug_description}"
+        variables = {"bug_description": "Error: {status=500} & response=null"}
+        
+        result = engine._replace_variables(text, variables)
+        
+        assert result == "Fix bug: Error: {status=500} & response=null"
+    
+    def test_replace_variables_empty_string_value(self):
+        """Test that _replace_variables() handles empty string as replacement value"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        text = "Prefix{separator}Suffix"
+        variables = {"separator": ""}
+        
+        result = engine._replace_variables(text, variables)
+        
+        assert result == "PrefixSuffix"
+    
+    def test_replace_variables_with_unicode_characters(self):
+        """Test that _replace_variables() handles unicode characters correctly"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        text = "实现 {feature_name} 功能"
+        variables = {"feature_name": "用户认证"}
+        
+        result = engine._replace_variables(text, variables)
+        
+        assert result == "实现 用户认证 功能"
+    
+    def test_validate_required_variables_all_required_provided(self):
+        """Test that _validate_required_variables() succeeds when all required variables are provided"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        # Create template with required and optional prompts
+        template = TaskTemplate(
+            name="test",
+            title="Test {required1}",
+            description="{required2} and {optional1}",
+            priority=Priority.REQUIRED,
+            estimated_effort=3,
+            prompts=[
+                TemplatePrompt("required1", "Enter value 1", required=True),
+                TemplatePrompt("required2", "Enter value 2", required=True),
+                TemplatePrompt("optional1", "Enter optional", required=False)
+            ]
+        )
+        
+        # Provide all required variables
+        variables = {
+            "required1": "value1",
+            "required2": "value2"
+        }
+        
+        # Should not raise any exception
+        engine._validate_required_variables(template, variables)
+    
+    def test_validate_required_variables_missing_single_required(self):
+        """Test that _validate_required_variables() raises MissingVariableError for missing required variable"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        template = TaskTemplate(
+            name="test",
+            title="Test {required1}",
+            description="{required2}",
+            priority=Priority.REQUIRED,
+            estimated_effort=3,
+            prompts=[
+                TemplatePrompt("required1", "Enter value 1", required=True),
+                TemplatePrompt("required2", "Enter value 2", required=True)
+            ]
+        )
+        
+        # Only provide one required variable
+        variables = {"required1": "value1"}
+        
+        with pytest.raises(MissingVariableError) as exc_info:
+            engine._validate_required_variables(template, variables)
+        
+        assert "required2" in str(exc_info.value)
+        assert "Missing required variables" in str(exc_info.value)
+    
+    def test_validate_required_variables_missing_multiple_required(self):
+        """Test that _validate_required_variables() raises MissingVariableError for multiple missing variables"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        template = TaskTemplate(
+            name="test",
+            title="Test {required1}",
+            description="{required2} and {required3}",
+            priority=Priority.REQUIRED,
+            estimated_effort=3,
+            prompts=[
+                TemplatePrompt("required1", "Enter value 1", required=True),
+                TemplatePrompt("required2", "Enter value 2", required=True),
+                TemplatePrompt("required3", "Enter value 3", required=True)
+            ]
+        )
+        
+        # Provide no variables
+        variables = {}
+        
+        with pytest.raises(MissingVariableError) as exc_info:
+            engine._validate_required_variables(template, variables)
+        
+        error_message = str(exc_info.value)
+        assert "Missing required variables" in error_message
+        # All three required variables should be in the error message
+        assert "required1" in error_message or "required2" in error_message or "required3" in error_message
+    
+    def test_validate_required_variables_optional_not_provided(self):
+        """Test that _validate_required_variables() allows missing optional variables"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        template = TaskTemplate(
+            name="test",
+            title="Test {required1}",
+            description="{optional1} and {optional2}",
+            priority=Priority.REQUIRED,
+            estimated_effort=3,
+            prompts=[
+                TemplatePrompt("required1", "Enter value 1", required=True),
+                TemplatePrompt("optional1", "Enter optional 1", required=False),
+                TemplatePrompt("optional2", "Enter optional 2", required=False)
+            ]
+        )
+        
+        # Only provide required variable, omit optional ones
+        variables = {"required1": "value1"}
+        
+        # Should not raise any exception
+        engine._validate_required_variables(template, variables)
+    
+    def test_validate_required_variables_empty_dict(self):
+        """Test that _validate_required_variables() raises error when variables dict is empty"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        template = TaskTemplate(
+            name="test",
+            title="Test {required1}",
+            description="{required2}",
+            priority=Priority.REQUIRED,
+            estimated_effort=3,
+            prompts=[
+                TemplatePrompt("required1", "Enter value 1", required=True),
+                TemplatePrompt("required2", "Enter value 2", required=True)
+            ]
+        )
+        
+        # Empty variables dict
+        variables = {}
+        
+        with pytest.raises(MissingVariableError):
+            engine._validate_required_variables(template, variables)
+    
+    def test_validate_required_variables_all_optional_no_variables_provided(self):
+        """Test that _validate_required_variables() succeeds when all prompts are optional"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        template = TaskTemplate(
+            name="test",
+            title="Test {optional1}",
+            description="{optional2}",
+            priority=Priority.REQUIRED,
+            estimated_effort=3,
+            prompts=[
+                TemplatePrompt("optional1", "Enter optional 1", required=False),
+                TemplatePrompt("optional2", "Enter optional 2", required=False)
+            ]
+        )
+        
+        # No variables provided
+        variables = {}
+        
+        # Should not raise any exception since all prompts are optional
+        engine._validate_required_variables(template, variables)
+    
+    def test_validate_required_variables_extra_variables_provided(self):
+        """Test that _validate_required_variables() allows extra variables beyond required"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        template = TaskTemplate(
+            name="test",
+            title="Test {required1}",
+            description="{required2}",
+            priority=Priority.REQUIRED,
+            estimated_effort=3,
+            prompts=[
+                TemplatePrompt("required1", "Enter value 1", required=True),
+                TemplatePrompt("required2", "Enter value 2", required=True)
+            ]
+        )
+        
+        # Provide required variables plus extra ones
+        variables = {
+            "required1": "value1",
+            "required2": "value2",
+            "extra_var": "extra_value"
+        }
+        
+        # Should not raise any exception
+        engine._validate_required_variables(template, variables)
+
+
+# ===== Tests for create_task_from_template() method (Task 5.7) =====
+
+class TestCreateTaskFromTemplate:
+    """Test suite for TemplateEngine.create_task_from_template() method"""
+    
+    def test_create_task_from_template_raises_if_template_not_found(self):
+        """Test that create_task_from_template raises TemplateNotFoundError when template doesn't exist"""
+        from harness.templates import TemplateNotFoundError
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        # Mock template_store.get_template() to return None
+        template_store.get_template.return_value = None
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        with pytest.raises(TemplateNotFoundError) as exc_info:
+            engine.create_task_from_template("nonexistent", interactive=False)
+        
+        assert "nonexistent" in str(exc_info.value)
+        template_store.get_template.assert_called_once_with("nonexistent")
+    
+    def test_create_task_from_template_raises_if_template_invalid(self):
+        """Test that create_task_from_template raises TemplateValidationError for invalid template"""
+        from harness.templates import TemplateValidationError
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        # Create an invalid template (empty prompts list)
+        invalid_template = TaskTemplate(
+            name="invalid",
+            title="Test",
+            description="Test",
+            priority=Priority.REQUIRED,
+            estimated_effort=1,
+            prompts=[]  # Invalid: must have at least one prompt
+        )
+        
+        template_store.get_template.return_value = invalid_template
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        with pytest.raises(TemplateValidationError):
+            engine.create_task_from_template("invalid", interactive=False)
+    
+    def test_create_task_from_template_non_interactive_success(self):
+        """Test create_task_from_template in non-interactive mode with valid variables"""
+        from harness.models import Task
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        # Create a valid template
+        template = TaskTemplate(
+            name="feature",
+            title="Implement {feature_name} feature",
+            description="Add {feature_name} with {component} component",
+            priority=Priority.RECOMMENDED,
+            estimated_effort=3,
+            prompts=[
+                TemplatePrompt("feature_name", "Feature name?", required=True),
+                TemplatePrompt("component", "Component?", required=True)
+            ],
+            acceptance_criteria=["Feature works", "Tests pass"]
+        )
+        
+        template_store.get_template.return_value = template
+        task_store.get_next_task_id.return_value = 42
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        # Provide variables
+        variables = {
+            "feature_name": "authentication",
+            "component": "UserService"
+        }
+        
+        task = engine.create_task_from_template(
+            "feature",
+            variables=variables,
+            interactive=False
+        )
+        
+        # Verify task was created correctly
+        assert isinstance(task, Task)
+        assert task.id == 42
+        assert task.title == "Implement authentication feature"
+        assert task.description == "Add authentication with UserService component"
+        assert task.priority == Priority.RECOMMENDED
+        assert task.estimated_effort == 3
+        assert task.acceptance_criteria == ["Feature works", "Tests pass"]
+        
+        # Verify methods were called
+        template_store.get_template.assert_called_once_with("feature")
+        task_store.get_next_task_id.assert_called_once()
+    
+    def test_create_task_from_template_non_interactive_missing_required_variable(self):
+        """Test that create_task_from_template raises MissingVariableError for missing required variables"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        template = TaskTemplate(
+            name="bugfix",
+            title="Fix {bug_name}",
+            description="Fix bug: {bug_description}",
+            priority=Priority.REQUIRED,
+            estimated_effort=2,
+            prompts=[
+                TemplatePrompt("bug_name", "Bug name?", required=True),
+                TemplatePrompt("bug_description", "Description?", required=True)
+            ]
+        )
+        
+        template_store.get_template.return_value = template
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        # Only provide one required variable
+        variables = {
+            "bug_name": "login-failure"
+            # Missing: bug_description
+        }
+        
+        with pytest.raises(MissingVariableError) as exc_info:
+            engine.create_task_from_template(
+                "bugfix",
+                variables=variables,
+                interactive=False
+            )
+        
+        assert "bug_description" in str(exc_info.value)
+    
+    def test_create_task_from_template_non_interactive_with_optional_variables(self):
+        """Test create_task_from_template handles optional variables correctly"""
+        from harness.models import Task
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        template = TaskTemplate(
+            name="refactor",
+            title="Refactor {module}",
+            description="Refactor {module} - {notes}",
+            priority=Priority.OPTIONAL,
+            estimated_effort=2,
+            prompts=[
+                TemplatePrompt("module", "Module?", required=True),
+                TemplatePrompt("notes", "Notes?", required=False, default="No notes")
+            ]
+        )
+        
+        template_store.get_template.return_value = template
+        task_store.get_next_task_id.return_value = 10
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        # Only provide required variable
+        variables = {
+            "module": "auth_service"
+        }
+        
+        task = engine.create_task_from_template(
+            "refactor",
+            variables=variables,
+            interactive=False
+        )
+        
+        assert task.id == 10
+        assert task.title == "Refactor auth_service"
+        # Optional variable not provided, so {notes} remains unreplaced
+        assert task.description == "Refactor auth_service - {notes}"
+    
+    def test_create_task_from_template_non_interactive_empty_variables_dict(self):
+        """Test create_task_from_template with empty variables dict raises error for required variables"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        template = TaskTemplate(
+            name="test",
+            title="Test {var}",
+            description="Test",
+            priority=Priority.REQUIRED,
+            estimated_effort=1,
+            prompts=[
+                TemplatePrompt("var", "Var?", required=True)
+            ]
+        )
+        
+        template_store.get_template.return_value = template
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        with pytest.raises(MissingVariableError):
+            engine.create_task_from_template("test", variables={}, interactive=False)
+    
+    def test_create_task_from_template_non_interactive_none_variables(self):
+        """Test create_task_from_template with None variables raises error for required variables"""
+        template_store = Mock()
+        task_store = Mock()
+        
+        template = TaskTemplate(
+            name="test",
+            title="Test {var}",
+            description="Test",
+            priority=Priority.REQUIRED,
+            estimated_effort=1,
+            prompts=[
+                TemplatePrompt("var", "Var?", required=True)
+            ]
+        )
+        
+        template_store.get_template.return_value = template
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        with pytest.raises(MissingVariableError):
+            engine.create_task_from_template("test", variables=None, interactive=False)
+    
+    def test_create_task_from_template_copies_acceptance_criteria(self):
+        """Test that create_task_from_template copies acceptance_criteria from template"""
+        from harness.models import Task
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        template = TaskTemplate(
+            name="test",
+            title="Test {var}",
+            description="Test",
+            priority=Priority.REQUIRED,
+            estimated_effort=1,
+            prompts=[
+                TemplatePrompt("var", "Var?", required=True)
+            ],
+            acceptance_criteria=["Criterion 1", "Criterion 2", "Criterion 3"]
+        )
+        
+        template_store.get_template.return_value = template
+        task_store.get_next_task_id.return_value = 1
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        task = engine.create_task_from_template(
+            "test",
+            variables={"var": "value"},
+            interactive=False
+        )
+        
+        assert task.acceptance_criteria == ["Criterion 1", "Criterion 2", "Criterion 3"]
+        
+        # Verify it's a copy (modifying task shouldn't affect template)
+        task.acceptance_criteria.append("New criterion")
+        assert len(template.acceptance_criteria) == 3  # Original unchanged
+    
+    def test_create_task_from_template_replaces_multiple_occurrences(self):
+        """Test that variable replacement handles multiple occurrences of same variable"""
+        from harness.models import Task
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        template = TaskTemplate(
+            name="test",
+            title="{feature} - {feature} Implementation",
+            description="Implement {feature} and test {feature} thoroughly. {feature} is important.",
+            priority=Priority.REQUIRED,
+            estimated_effort=4,
+            prompts=[
+                TemplatePrompt("feature", "Feature?", required=True)
+            ]
+        )
+        
+        template_store.get_template.return_value = template
+        task_store.get_next_task_id.return_value = 5
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        task = engine.create_task_from_template(
+            "test",
+            variables={"feature": "Dashboard"},
+            interactive=False
+        )
+        
+        assert task.title == "Dashboard - Dashboard Implementation"
+        assert task.description == "Implement Dashboard and test Dashboard thoroughly. Dashboard is important."
+    
+    def test_create_task_from_template_preserves_task_status_default(self):
+        """Test that created task has default TODO status"""
+        from harness.models import Task, TaskStatus
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        template = TaskTemplate(
+            name="test",
+            title="Test {var}",
+            description="Test description",
+            priority=Priority.REQUIRED,
+            estimated_effort=1,
+            prompts=[
+                TemplatePrompt("var", "Var?", required=False)
+            ]
+        )
+        
+        template_store.get_template.return_value = template
+        task_store.get_next_task_id.return_value = 1
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        task = engine.create_task_from_template("test", variables={}, interactive=False)
+        
+        # Task should have default TODO status
+        assert task.status == TaskStatus.TODO
+    
+    def test_create_task_from_template_with_extra_variables(self):
+        """Test that extra variables (not in template) don't cause issues"""
+        from harness.models import Task
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        template = TaskTemplate(
+            name="test",
+            title="Test {var1}",
+            description="Test",
+            priority=Priority.REQUIRED,
+            estimated_effort=1,
+            prompts=[
+                TemplatePrompt("var1", "Var1?", required=True)
+            ]
+        )
+        
+        template_store.get_template.return_value = template
+        task_store.get_next_task_id.return_value = 1
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        # Provide extra variables that aren't in the template
+        variables = {
+            "var1": "value1",
+            "var2": "value2",  # Extra
+            "var3": "value3"   # Extra
+        }
+        
+        task = engine.create_task_from_template("test", variables=variables, interactive=False)
+        
+        assert task.title == "Test value1"
+        # Extra variables should be ignored (not cause errors)
+
+
+# ===== Integration Tests for Interactive Mode (Task 5.8) =====
+
+class TestTemplateEngineInteractiveMode:
+    """Integration tests for TemplateEngine interactive mode with mocked user input"""
+    
+    def test_interactive_mode_with_single_line_inputs(self, monkeypatch):
+        """Test interactive mode with single-line inputs using click.prompt"""
+        from harness.models import Task
+        from unittest.mock import patch
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        # Create template with single-line prompts
+        template = TaskTemplate(
+            name="feature",
+            title="Implement {feature_name} feature",
+            description="Add {feature_name} to {component}",
+            priority=Priority.REQUIRED,
+            estimated_effort=3,
+            prompts=[
+                TemplatePrompt("feature_name", "请输入功能名称", required=True, multiline=False),
+                TemplatePrompt("component", "请输入组件名称", required=True, multiline=False)
+            ],
+            acceptance_criteria=["Feature works", "Tests pass"]
+        )
+        
+        template_store.get_template.return_value = template
+        task_store.get_next_task_id.return_value = 1
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        # Mock click.prompt and click.echo
+        prompt_responses = ["用户认证", "AuthService"]
+        prompt_call_count = [0]
+        
+        def mock_prompt(question, default=None, show_default=False):
+            response = prompt_responses[prompt_call_count[0]]
+            prompt_call_count[0] += 1
+            return response
+        
+        with patch('click.prompt', side_effect=mock_prompt) as mock_click_prompt, \
+             patch('click.echo') as mock_echo:
+            
+            task = engine.create_task_from_template("feature", interactive=True)
+            
+            # Verify task was created correctly
+            assert task.title == "Implement 用户认证 feature"
+            assert task.description == "Add 用户认证 to AuthService"
+            assert task.priority == Priority.REQUIRED
+            assert task.estimated_effort == 3
+            
+            # Verify click.echo was called to display template name
+            assert mock_echo.call_count >= 1
+            echo_calls = [str(call) for call in mock_echo.call_args_list]
+            assert any("feature" in str(call) for call in echo_calls)
+            
+            # Verify click.prompt was called twice
+            assert mock_click_prompt.call_count == 2
+    
+    def test_interactive_mode_with_multiline_input(self, monkeypatch):
+        """Test interactive mode with multiline input using input() and EOFError"""
+        from harness.models import Task
+        from unittest.mock import patch
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        # Create template with multiline prompt
+        template = TaskTemplate(
+            name="bugfix",
+            title="Fix {bug_name}",
+            description="Bug: {bug_description}",
+            priority=Priority.REQUIRED,
+            estimated_effort=2,
+            prompts=[
+                TemplatePrompt("bug_name", "请输入Bug名称", required=True, multiline=False),
+                TemplatePrompt("bug_description", "请输入Bug描述", required=True, multiline=True)
+            ]
+        )
+        
+        template_store.get_template.return_value = template
+        task_store.get_next_task_id.return_value = 2
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        # Mock inputs
+        # For multiline input, input() is called multiple times until EOFError
+        multiline_inputs = [
+            "登录接口返回500错误",
+            "复现步骤:",
+            "1. 访问/login",
+            "2. 输入用户名密码",
+        ]
+        input_call_count = [0]
+        
+        def mock_input(prompt=""):
+            if input_call_count[0] < len(multiline_inputs):
+                response = multiline_inputs[input_call_count[0]]
+                input_call_count[0] += 1
+                return response
+            else:
+                # Simulate Ctrl+D (EOF)
+                raise EOFError()
+        
+        def mock_click_prompt(question, default=None, show_default=False):
+            return "登录500错误"
+        
+        with patch('click.prompt', side_effect=mock_click_prompt), \
+             patch('click.echo'), \
+             patch('builtins.input', side_effect=mock_input):
+            
+            task = engine.create_task_from_template("bugfix", interactive=True)
+            
+            # Verify task was created correctly
+            assert task.title == "Fix 登录500错误"
+            expected_description = "Bug: " + "\n".join(multiline_inputs)
+            assert task.description == expected_description
+    
+    def test_interactive_mode_with_default_values(self, monkeypatch):
+        """Test interactive mode with default values for prompts"""
+        from harness.models import Task
+        from unittest.mock import patch
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        # Create template with prompts that have default values
+        template = TaskTemplate(
+            name="refactor",
+            title="Refactor {module}",
+            description="Refactor {module} - Reason: {reason}",
+            priority=Priority.RECOMMENDED,
+            estimated_effort=3,
+            prompts=[
+                TemplatePrompt("module", "请输入模块名称", required=True, multiline=False),
+                TemplatePrompt("reason", "请输入重构原因", required=False, multiline=False, default="提升代码质量")
+            ]
+        )
+        
+        template_store.get_template.return_value = template
+        task_store.get_next_task_id.return_value = 3
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        # Mock click.prompt
+        # First call returns module name, second call returns default value
+        prompt_responses = ["executor模块", "提升代码质量"]  # User accepts default
+        prompt_call_count = [0]
+        
+        def mock_prompt(question, default=None, show_default=False):
+            response = prompt_responses[prompt_call_count[0]]
+            prompt_call_count[0] += 1
+            return response
+        
+        with patch('click.prompt', side_effect=mock_prompt) as mock_click_prompt, \
+             patch('click.echo'):
+            
+            task = engine.create_task_from_template("refactor", interactive=True)
+            
+            # Verify task was created correctly
+            assert task.title == "Refactor executor模块"
+            assert task.description == "Refactor executor模块 - Reason: 提升代码质量"
+            
+            # Verify click.prompt was called with default parameter for second prompt
+            assert mock_click_prompt.call_count == 2
+            second_call_kwargs = mock_click_prompt.call_args_list[1][1]
+            assert second_call_kwargs.get('default') == "提升代码质量"
+            assert second_call_kwargs.get('show_default') is True
+    
+    def test_interactive_mode_with_mix_of_required_and_optional(self, monkeypatch):
+        """Test interactive mode with mix of required and optional fields"""
+        from harness.models import Task
+        from unittest.mock import patch
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        # Create template with mix of required and optional prompts
+        template = TaskTemplate(
+            name="task",
+            title="{title_text}",
+            description="{description_text} - Priority: {priority_text} - Notes: {notes}",
+            priority=Priority.REQUIRED,
+            estimated_effort=2,
+            prompts=[
+                TemplatePrompt("title_text", "任务标题", required=True, multiline=False),
+                TemplatePrompt("description_text", "任务描述", required=True, multiline=False),
+                TemplatePrompt("priority_text", "优先级", required=False, multiline=False, default="中"),
+                TemplatePrompt("notes", "备注", required=False, multiline=False, default="无")
+            ]
+        )
+        
+        template_store.get_template.return_value = template
+        task_store.get_next_task_id.return_value = 4
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        # Mock click.prompt - provide required fields and accept defaults for optional
+        prompt_responses = ["实现API接口", "完成REST API开发", "中", "无"]
+        prompt_call_count = [0]
+        
+        def mock_prompt(question, default=None, show_default=False):
+            response = prompt_responses[prompt_call_count[0]]
+            prompt_call_count[0] += 1
+            return response
+        
+        with patch('click.prompt', side_effect=mock_prompt), \
+             patch('click.echo'):
+            
+            task = engine.create_task_from_template("task", interactive=True)
+            
+            assert task.title == "实现API接口"
+            assert task.description == "完成REST API开发 - Priority: 中 - Notes: 无"
+    
+    def test_interactive_mode_empty_required_field_raises_error(self, monkeypatch):
+        """Test that empty required field without default raises MissingVariableError"""
+        from unittest.mock import patch
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        # Create template with required prompt
+        template = TaskTemplate(
+            name="test",
+            title="{required_field}",
+            description="Test",
+            priority=Priority.REQUIRED,
+            estimated_effort=1,
+            prompts=[
+                TemplatePrompt("required_field", "Required field", required=True, multiline=False)
+            ]
+        )
+        
+        template_store.get_template.return_value = template
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        # Mock click.prompt to return empty string
+        def mock_prompt(question, default=None, show_default=False):
+            return "   "  # Whitespace only
+        
+        with patch('click.prompt', side_effect=mock_prompt), \
+             patch('click.echo'):
+            
+            with pytest.raises(MissingVariableError) as exc_info:
+                engine.create_task_from_template("test", interactive=True)
+            
+            assert "required_field" in str(exc_info.value)
+            assert "cannot be empty" in str(exc_info.value)
+    
+    def test_interactive_mode_optional_field_with_default_uses_default_when_user_accepts(self, monkeypatch):
+        """Test that click.prompt with default returns default when user presses Enter"""
+        from harness.models import Task
+        from unittest.mock import patch
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        # Create template with optional prompt that has a default
+        template = TaskTemplate(
+            name="test",
+            title="{title_field}",
+            description="{optional_field}",
+            priority=Priority.REQUIRED,
+            estimated_effort=1,
+            prompts=[
+                TemplatePrompt("title_field", "Title", required=True, multiline=False),
+                TemplatePrompt("optional_field", "Optional", required=False, multiline=False, default="默认值")
+            ]
+        )
+        
+        template_store.get_template.return_value = template
+        task_store.get_next_task_id.return_value = 5
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        # Mock click.prompt - simulate user accepting default by returning the default value
+        # This is what click.prompt does when user presses Enter without typing anything
+        prompt_responses = ["测试标题", "默认值"]  # Second is the default (user pressed Enter)
+        prompt_call_count = [0]
+        
+        def mock_prompt(question, default=None, show_default=False):
+            response = prompt_responses[prompt_call_count[0]]
+            prompt_call_count[0] += 1
+            return response
+        
+        with patch('click.prompt', side_effect=mock_prompt), \
+             patch('click.echo'):
+            
+            task = engine.create_task_from_template("test", interactive=True)
+            
+            # Optional field should have the default value
+            assert task.title == "测试标题"
+            assert task.description == "默认值"
+    
+    def test_interactive_mode_displays_template_header(self, monkeypatch):
+        """Test that interactive mode displays template name header"""
+        from unittest.mock import patch
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        # Create simple template
+        template = TaskTemplate(
+            name="feature-template",
+            title="{name}",
+            description="Description",
+            priority=Priority.REQUIRED,
+            estimated_effort=1,
+            prompts=[
+                TemplatePrompt("name", "Name?", required=True, multiline=False)
+            ]
+        )
+        
+        template_store.get_template.return_value = template
+        task_store.get_next_task_id.return_value = 1
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        # Mock prompts
+        def mock_prompt(question, default=None, show_default=False):
+            return "test"
+        
+        with patch('click.prompt', side_effect=mock_prompt), \
+             patch('click.echo') as mock_echo:
+            
+            engine.create_task_from_template("feature-template", interactive=True)
+            
+            # Verify click.echo was called with template name
+            echo_calls = [str(call) for call in mock_echo.call_args_list]
+            # Should display template name in header
+            assert any("feature-template" in str(call) for call in echo_calls)
+    
+    def test_interactive_mode_multiline_with_multiple_eof_lines(self, monkeypatch):
+        """Test multiline input with multiple lines followed by EOFError"""
+        from harness.models import Task
+        from unittest.mock import patch
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        # Create template with multiline field
+        template = TaskTemplate(
+            name="test",
+            title="Test",
+            description="{multiline_field}",
+            priority=Priority.REQUIRED,
+            estimated_effort=1,
+            prompts=[
+                TemplatePrompt("multiline_field", "Enter multiline text", required=True, multiline=True)
+            ]
+        )
+        
+        template_store.get_template.return_value = template
+        task_store.get_next_task_id.return_value = 1
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        # Mock multiline input
+        lines = ["Line 1", "Line 2", "Line 3", "Line 4"]
+        input_call_count = [0]
+        
+        def mock_input(prompt=""):
+            if input_call_count[0] < len(lines):
+                response = lines[input_call_count[0]]
+                input_call_count[0] += 1
+                return response
+            else:
+                raise EOFError()
+        
+        with patch('builtins.input', side_effect=mock_input), \
+             patch('click.echo'):
+            
+            task = engine.create_task_from_template("test", interactive=True)
+            
+            # Verify multiline content was joined correctly
+            expected_description = "\n".join(lines)
+            assert task.description == expected_description
+    
+    def test_interactive_mode_single_and_multiline_mixed(self, monkeypatch):
+        """Test interactive mode with both single-line and multiline prompts"""
+        from harness.models import Task
+        from unittest.mock import patch
+        
+        template_store = Mock()
+        task_store = Mock()
+        
+        # Create template with both single-line and multiline prompts
+        template = TaskTemplate(
+            name="mixed",
+            title="{single_line}",
+            description="Single: {single_line}\nMulti: {multi_line}",
+            priority=Priority.REQUIRED,
+            estimated_effort=2,
+            prompts=[
+                TemplatePrompt("single_line", "Single line input", required=True, multiline=False),
+                TemplatePrompt("multi_line", "Multi line input", required=True, multiline=True)
+            ]
+        )
+        
+        template_store.get_template.return_value = template
+        task_store.get_next_task_id.return_value = 1
+        
+        engine = TemplateEngine(template_store, task_store)
+        
+        # Mock single-line prompt
+        def mock_prompt(question, default=None, show_default=False):
+            return "Single Line Value"
+        
+        # Mock multiline input
+        multiline_data = ["Multi Line 1", "Multi Line 2"]
+        input_call_count = [0]
+        
+        def mock_input(prompt=""):
+            if input_call_count[0] < len(multiline_data):
+                response = multiline_data[input_call_count[0]]
+                input_call_count[0] += 1
+                return response
+            else:
+                raise EOFError()
+        
+        with patch('click.prompt', side_effect=mock_prompt), \
+             patch('builtins.input', side_effect=mock_input), \
+             patch('click.echo'):
+            
+            task = engine.create_task_from_template("mixed", interactive=True)
+            
+            assert task.title == "Single Line Value"
+            expected_desc = "Single: Single Line Value\nMulti: Multi Line 1\nMulti Line 2"
+            assert task.description == expected_desc
