@@ -1,0 +1,5 @@
+{
+  "ai_model": "claude-sonnet-4-20250514",
+  "execution_mode": "AUTO",
+  "max_workers": 4
+}
