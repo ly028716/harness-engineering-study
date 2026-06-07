@@ -129,6 +129,47 @@ class GitWorktreeManager:
 
         return changes
 
+    def detect_changes_since(self, base_ref: str = "HEAD~1") -> List[GitChange]:
+        """检测相对于基准的变更
+
+        Args:
+            base_ref: 基准引用（commit hash/分支名/HEAD~N）
+
+        Returns:
+            变更列表（只包含新增和修改的文件）
+        """
+        if not self._is_git_repo:
+            # 模拟模式
+            return []
+
+        # 验证 base_ref 是否存在
+        verify_result = self._run_git("rev-parse", "--verify", base_ref, check=False)
+        if verify_result.returncode != 0:
+            raise ValueError(f"无效的基准引用: {base_ref}")
+
+        changes = []
+
+        # 获取变更文件列表 (base_ref..HEAD)
+        result = self._run_git("diff", "--name-status", f"{base_ref}..HEAD")
+        if result.returncode != 0:
+            return changes
+
+        for line in result.stdout.strip().split("\n"):
+            if not line:
+                continue
+            parts = line.split("\t")
+            if len(parts) >= 2:
+                status = parts[0]
+                file = parts[1]
+                
+                # 只返回新增(A)和修改(M)的文件
+                if status in ["A", "M"]:
+                    # 转换为绝对路径
+                    abs_path = str(self.repo_path / file)
+                    changes.append(GitChange(file=abs_path, status=status))
+
+        return changes
+
     def get_current_branch(self) -> Optional[str]:
         """获取当前分支
 

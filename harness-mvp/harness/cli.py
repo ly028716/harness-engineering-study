@@ -821,5 +821,128 @@ def last():
         click.echo(f"[{timestamp}] {event_type}: #{task_id} {task_title}")
 
 
+@review.command()
+@click.option('--base', default='HEAD~1', help='对比基准 (commit/branch/HEAD~N)')
+def incremental(base: str):
+    """增量代码审查
+
+    只审查相对于基准的变更文件，提高审查效率。
+
+    \b
+    使用示例:
+      harness review incremental              # 审查最近一次提交
+      harness review incremental --base main  # 审查与 main 分支的差异
+      harness review incremental --base abc123  # 审查与特定 commit 的差异
+    """
+    from harness.git import GitWorktreeManager
+    
+    # 获取仓库路径（当前目录）
+    repo_path = Path.cwd()
+    
+    try:
+        git_manager = GitWorktreeManager(str(repo_path))
+    except Exception as e:
+        click.echo(f"错误：无法初始化 Git 管理器 - {e}")
+        return
+    
+    # 检测变更
+    try:
+        changes = git_manager.detect_changes_since(base)
+    except ValueError as e:
+        click.echo(f"错误：{e}")
+        return
+    except Exception as e:
+        click.echo(f"错误：检测变更失败 - {e}")
+        return
+    
+    if not changes:
+        click.echo(f"没有相对于 '{base}' 的变更需要审查。")
+        return
+    
+    # 输出报告头部
+    click.echo("=== 增量代码审查报告 ===\n")
+    click.echo(f"对比基准: {base}")
+    click.echo(f"变更文件: {len(changes)} 个\n")
+    
+    # 逐文件审查
+    reviewer = ReviewerAgent()
+    all_results = {}
+    total_issues = []
+    
+    for change in changes:
+        file_path = Path(change.file)
+        
+        # 检查文件是否存在
+        if not file_path.exists():
+            click.echo(f"警告：文件不存在 {change.file}")
+            continue
+        
+        # 读取文件内容
+        try:
+            code = file_path.read_text(encoding='utf-8')
+        except Exception as e:
+            click.echo(f"警告：无法读取文件 {change.file} - {e}")
+            continue
+        
+        # 审查代码
+        result = reviewer.review_code(code, change.file)
+        all_results[change.file] = result
+        
+        # 显示文件审查结果
+        click.echo(f"文件: {change.file}")
+        click.echo("━" * 60)
+        
+        if result.issues:
+            for issue in result.issues:
+                severity_icon = {
+                    "CRITICAL": "🔴",
+                    "MAJOR": "🟡",
+                    "MINOR": "🔵",
+                    "INFO": "ℹ️"
+                }.get(issue.severity.value, "")
+                
+                click.echo(f"{severity_icon} {issue.severity.value} - {issue.category.value}")
+                click.echo(f"  第 {issue.line} 行: {issue.message}")
+                if issue.suggestion:
+                    click.echo(f"  建议: {issue.suggestion}")
+                click.echo()
+            
+            total_issues.extend(result.issues)
+        else:
+            click.echo("✅ 没有问题\n")
+    
+    # 生成总结
+    click.echo("━" * 60)
+    click.echo("📊 总结\n")
+    click.echo(f"总变更: {len(changes)} 个文件")
+    
+    if total_issues:
+        critical = sum(1 for i in total_issues if i.severity.value == "CRITICAL")
+        major = sum(1 for i in total_issues if i.severity.value == "MAJOR")
+        minor = sum(1 for i in total_issues if i.severity.value == "MINOR")
+        info = sum(1 for i in total_issues if i.severity.value == "INFO")
+        
+        click.echo("问题统计:")
+        if critical > 0:
+            click.echo(f"  - 严重问题: {critical} 个")
+        if major > 0:
+            click.echo(f"  - 主要问题: {major} 个")
+        if minor > 0:
+            click.echo(f"  - 次要问题: {minor} 个")
+        if info > 0:
+            click.echo(f"  - 提示信息: {info} 个")
+        
+        # 判定
+        if critical >= 1 or major >= 2:
+            click.echo("\n最终判定: ❌ REQUEST_CHANGES (需要修改)")
+            if critical > 0:
+                click.echo("建议: 优先修复 CRITICAL 级别的问题")
+        else:
+            click.echo("\n最终判定: ✅ APPROVE (批准)")
+    else:
+        click.echo("问题统计: 无问题")
+        click.echo("\n最终判定: ✅ APPROVE (批准)")
+
+
 if __name__ == '__main__':
     main()
