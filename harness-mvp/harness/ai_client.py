@@ -18,7 +18,14 @@ class AIClient:
             raise ValueError(
                 "缺少 Anthropic API 密钥。请设置 ANTHROPIC_API_KEY 环境变量。"
             )
-        self.model = model or self._load_model_from_config()
+        resolved = model or self._load_model_from_config()
+        # 验证模型名称，未知则回退默认
+        try:
+            from harness.config import ModelName
+            ModelName.from_string(resolved)
+        except ValueError:
+            resolved = "claude-sonnet-4-20250514"
+        self.model = resolved
 
     @staticmethod
     def _load_model_from_config() -> str:

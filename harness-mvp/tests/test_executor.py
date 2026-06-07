@@ -112,6 +112,18 @@ class TestWorkerAgent:
         assert worker.task.id == 1
         assert worker.status == "idle"
 
+    def test_worker_agent_default_role(self):
+        """RED: 测试 WorkerAgent 默认角色为 worker"""
+        from harness.executor import WorkerAgent
+        worker = WorkerAgent(task=Task(id=1, title="Test Task"))
+        assert worker.role == "worker"
+
+    def test_worker_agent_custom_role(self):
+        """RED: 测试 WorkerAgent 自定义角色"""
+        from harness.executor import WorkerAgent
+        worker = WorkerAgent(task=Task(id=1, title="Test Task"), role="reviewer")
+        assert worker.role == "reviewer"
+
     def test_worker_agent_execute_task(self):
         """RED: 测试 WorkerAgent 执行任务"""
         from harness.executor import WorkerAgent, ExecutionResult
@@ -360,6 +372,46 @@ class TestTaskExecutionService:
         assert result_dict["success"] is True
         assert result_dict["output"] == "Test output"
         assert result_dict["duration_seconds"] == 1.5
+
+    def test_execution_result_model_used_field(self):
+        """RED: 测试 ExecutionResult 包含 model_used 字段"""
+        from harness.executor import ExecutionResult
+
+        result = ExecutionResult(
+            task_id=1,
+            task_title="Test",
+            success=True,
+            model_used="claude-sonnet-4-20250514",
+        )
+        assert result.model_used == "claude-sonnet-4-20250514"
+
+    def test_execution_result_model_used_empty_default(self):
+        """RED: 测试 ExecutionResult model_used 默认为空"""
+        from harness.executor import ExecutionResult
+
+        result = ExecutionResult(
+            task_id=1,
+            task_title="Test",
+            success=True,
+        )
+        assert result.model_used == ""
+
+    def test_execution_result_to_dict_includes_model_used(self):
+        """RED: 测试 to_dict 包含 model_used"""
+        from harness.executor import ExecutionResult
+        from datetime import datetime
+
+        result = ExecutionResult(
+            task_id=1,
+            task_title="Test",
+            success=True,
+            model_used="claude-haiku-4-20250514",
+            started_at=datetime.now(),
+            completed_at=datetime.now(),
+            duration_seconds=1.0,
+        )
+        result_dict = result.to_dict()
+        assert result_dict["model_used"] == "claude-haiku-4-20250514"
 
     def test_worker_agent_execute_with_acceptance_criteria(self):
         """RED: 测试 WorkerAgent 执行带验收标准的任务"""

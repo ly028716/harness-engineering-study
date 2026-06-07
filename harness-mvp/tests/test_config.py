@@ -42,9 +42,9 @@ class TestSettings:
 
     def test_settings_to_dict(self):
         """RED: 测试序列化为字典"""
-        settings = Settings(ai_model="test-model", max_workers=8)
+        settings = Settings(ai_model="claude-haiku-4-20250514", max_workers=8)
         d = settings.to_dict()
-        assert d["ai_model"] == "test-model"
+        assert d["ai_model"] == "claude-haiku-4-20250514"
         assert d["max_workers"] == 8
         assert d["execution_mode"] == "AUTO"
 
@@ -63,9 +63,9 @@ class TestSettings:
 
     def test_settings_from_dict_partial(self):
         """RED: 测试从部分字典创建（缺失字段使用默认值）"""
-        d = {"ai_model": "custom-model"}
+        d = {"ai_model": "claude-haiku-4-20250514"}  # partial dict
         settings = Settings.from_dict(d)
-        assert settings.ai_model == "custom-model"
+        assert settings.ai_model == "claude-haiku-4-20250514"
         assert settings.max_workers == DEFAULT_SETTINGS.max_workers
 
     def test_settings_validate_max_workers(self):
@@ -75,10 +75,10 @@ class TestSettings:
 
     def test_settings_merge(self):
         """RED: 测试合并两个设置"""
-        base = Settings(ai_model="model-a", max_workers=2)
-        override = Settings(ai_model="model-b", api_key="sk-key")
+        base = Settings(ai_model="claude-haiku-4-20250514", max_workers=2)
+        override = Settings(ai_model="claude-opus-4-20250514", api_key="sk-key")
         merged = base.merge(override)
-        assert merged.ai_model == "model-b"
+        assert merged.ai_model == "claude-opus-4-20250514"
         assert merged.max_workers == 2
         assert merged.api_key == "sk-key"
 
@@ -111,11 +111,11 @@ class TestConfigManager:
             harness_dir.mkdir()
             manager = ConfigManager(harness_dir)
 
-            settings = Settings(ai_model="custom-model", max_workers=8)
+            settings = Settings(ai_model="claude-haiku-4-20250514", max_workers=8)
             manager.save(settings)
 
             loaded = manager.load()
-            assert loaded.ai_model == "custom-model"
+            assert loaded.ai_model == "claude-haiku-4-20250514"
             assert loaded.max_workers == 8
 
     def test_config_manager_load_nonexistent_returns_defaults(self):
@@ -146,9 +146,9 @@ class TestConfigManager:
             harness_dir.mkdir()
             manager = ConfigManager(harness_dir)
 
-            manager.update(ai_model="new-model", max_workers=10)
+            manager.update(ai_model="claude-haiku-4-20250514", max_workers=10)
             loaded = manager.load()
-            assert loaded.ai_model == "new-model"
+            assert loaded.ai_model == "claude-haiku-4-20250514"
             assert loaded.max_workers == 10
 
     def test_env_var_overrides_api_key(self):
@@ -177,10 +177,10 @@ class TestConfigManager:
             harness_dir = Path(tmpdir) / ".harness"
             harness_dir.mkdir()
             manager = ConfigManager(harness_dir)
-            manager.save(Settings(ai_model="file-model"))
+            manager.save(Settings(ai_model="claude-haiku-4-20250514"))
             with patch.dict(os.environ, {}, clear=True):
                 settings = manager.load_with_env_overrides()
-                assert settings.ai_model == "file-model"
+                assert settings.ai_model == "claude-haiku-4-20250514"
 
     def test_config_manager_reset(self):
         """RED: 测试重置为默认配置"""
@@ -228,14 +228,14 @@ class TestConfigManagerFindConfig:
                 harness_dir.mkdir()
                 config_file = harness_dir / "config.json"
                 config_file.write_text(
-                    json.dumps({"ai_model": "found-model"}, ensure_ascii=False),
+                    json.dumps({"ai_model": "claude-haiku-4-20250514"}, ensure_ascii=False),
                     encoding="utf-8",
                 )
 
                 manager = ConfigManager.find()
                 assert manager is not None
                 settings = manager.load()
-                assert settings.ai_model == "found-model"
+                assert settings.ai_model == "claude-haiku-4-20250514"
             finally:
                 os.chdir(orig_cwd)
 

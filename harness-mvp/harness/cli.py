@@ -1,6 +1,7 @@
 """CLI 入口点 - Phase 2 扩展"""
 import click
 from pathlib import Path
+from typing import Optional
 from harness import __version__
 from harness.models import Task, TaskStatus, Priority
 from harness.store import TaskStore
@@ -9,7 +10,8 @@ from harness.executor import TaskExecutionService, select_execution_mode, Execut
 from harness.reviewer import ReviewerAgent, ReviewResult
 from harness.custom_rules import CustomRuleStore, CustomRuleEngine, RuleNotFoundError, RuleNameConflictError
 from harness.dependency_graph import generate_mermaid_graph, generate_graph_report, find_critical_path
-from harness.config import ConfigManager, Settings
+from harness.config import ConfigManager, Settings, ModelName, get_model_for_role
+from harness.ai_client import AIClient
 
 
 def _load_custom_rule_engine():
@@ -26,6 +28,26 @@ def _load_custom_rule_engine():
         store = CustomRuleStore(harness_dir)
         return CustomRuleEngine(store)
     except Exception:
+        return None
+
+
+def _create_review_ai_client() -> Optional['AIClient']:
+    """创建用于审查的 AI 客户端（review 角色）
+
+    如果 API 密钥未配置，则返回 None，ReviewerAgent 将使用静态分析。
+
+    Returns:
+        AIClient 实例，或 None
+    """
+    try:
+        harness_dir = get_harness_dir()
+        if harness_dir.exists():
+            from harness.config import load_config
+            config = load_config(harness_dir)
+            model = get_model_for_role(config, "reviewer")
+            return AIClient(model=model)
+        return AIClient()
+    except (ValueError, ImportError):
         return None
 
 
@@ -494,7 +516,15 @@ def show():
     settings = manager.load_with_env_overrides()
 
     click.echo("\n=== 当前配置 ===\n")
-    click.echo(f"AI 模型：{settings.ai_model}")
+    click.echo(f"默认模型：{settings.ai_model}")
+    roles = [
+        ("Worker", settings.worker_model),
+        ("Reviewer", settings.reviewer_model),
+        ("Planner", settings.planner_model),
+    ]
+    for role_name, role_model in roles:
+        if role_model:
+            click.echo(f"  {role_name} 模型：{role_model}")
     click.echo(f"执行模式：{settings.execution_mode.value}")
     click.echo(f"最大 Worker 数：{settings.max_workers}")
 
@@ -525,6 +555,81 @@ def init():
     manager = ConfigManager(harness_dir)
     manager.reset()
     click.echo("已创建默认配置。")
+
+
+@config.group()
+def model():
+    """AI 模型配置管理"""
+    pass
+
+
+@model.command("list")
+def list_models():
+    """列出所有可用 AI 模型及成本信息"""
+    click.echo("\n=== 可用模型 ===\n")
+    for m in ModelName.list_all():
+        click.echo(f"  {m.value}")
+        click.echo(f"    名称: {m.display_name}")
+        click.echo(f"    输入: ${m.cost_per_1k_input:.3f}/1K tokens")
+        click.echo(f"    输出: ${m.cost_per_1k_output:.3f}/1K tokens")
+        click.echo(f"    定位: {'复杂推理' if m.is_powerful else '通用'}")
+        click.echo()
+
+
+@model.command("show")
+def show_model_config():
+    """显示当前各角色模型配置"""
+    harness_dir = get_harness_dir()
+
+    if not harness_dir.exists():
+        click.echo("错误：未找到 .harness 目录。")
+        return
+
+    manager = ConfigManager(harness_dir)
+    settings = manager.load_with_env_overrides()
+
+    click.echo("\n=== 角色模型配置 ===\n")
+    click.echo(f"  默认: {settings.ai_model}")
+    roles = [
+        ("Worker", settings.worker_model),
+        ("Reviewer", settings.reviewer_model),
+        ("Planner", settings.planner_model),
+    ]
+    for role_name, role_model in roles:
+        if role_model:
+            click.echo(f"  {role_name}: {role_model}")
+        else:
+            click.echo(f"  {role_name}: (使用默认)")
+
+
+@model.command("set")
+@click.argument('role', type=click.Choice(['worker', 'reviewer', 'planner'], case_sensitive=False))
+@click.argument('model_name')
+def set_model(role: str, model_name: str):
+    """设置角色模型
+
+    ROLE: 角色名称 (worker/reviewer/planner)
+    MODEL_NAME: 模型名称 (如 claude-sonnet-4-20250514)
+    """
+    # 验证模型名称
+    try:
+        ModelName.from_string(model_name)
+    except ValueError:
+        click.echo(f"错误：未知模型 '{model_name}'")
+        click.echo("可用模型:")
+        for m in ModelName.list_all():
+            click.echo(f"  - {m.value}")
+        return
+
+    harness_dir = get_harness_dir()
+    if not harness_dir.exists():
+        click.echo("错误：未找到 .harness 目录。请先创建计划。")
+        return
+
+    manager = ConfigManager(harness_dir)
+    field = f"{role}_model"
+    manager.update(**{field: model_name})
+    click.echo(f"已设置 {role} 模型为 {model_name}")
 
 
 # ===== Work 命令组 (Phase 3) =====
@@ -733,7 +838,11 @@ def code(file_path, review_all: bool):
 
     # 加载自定义规则
     rule_engine = _load_custom_rule_engine()
-    reviewer = ReviewerAgent(rule_engine=rule_engine)
+
+    # 创建 AI 客户端（按 review 角色选择模型）
+    ai_client = _create_review_ai_client()
+
+    reviewer = ReviewerAgent(ai_client=ai_client, rule_engine=rule_engine)
     all_issues = []
 
     for fp in file_path:
@@ -1043,7 +1152,11 @@ def incremental(base: str):
     
     # 逐文件审查
     rule_engine = _load_custom_rule_engine()
-    reviewer = ReviewerAgent(rule_engine=rule_engine)
+
+    # 创建 AI 客户端（按 review 角色选择模型）
+    ai_client = _create_review_ai_client()
+
+    reviewer = ReviewerAgent(ai_client=ai_client, rule_engine=rule_engine)
     all_results = {}
     total_issues = []
     

@@ -119,7 +119,7 @@ class TestAIClientConfigIntegration:
             harness_dir.mkdir()
             config_file = harness_dir / "config.json"
             config_file.write_text(json.dumps({
-                "ai_model": "config-model-name",
+                "ai_model": "claude-haiku-4-20250514",
             }), encoding='utf-8')
 
             old_cwd = os.getcwd()
@@ -127,7 +127,7 @@ class TestAIClientConfigIntegration:
             try:
                 with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}, clear=True):
                     client = AIClient()
-                    assert client.model == "config-model-name"
+                    assert client.model == "claude-haiku-4-20250514"
             finally:
                 os.chdir(old_cwd)
 
@@ -157,17 +157,33 @@ class TestAIClientConfigIntegration:
             harness_dir.mkdir()
             config_file = harness_dir / "config.json"
             config_file.write_text(json.dumps({
-                "ai_model": "config-model",
+                "ai_model": "claude-haiku-4-20250514",
             }), encoding='utf-8')
 
             old_cwd = os.getcwd()
             os.chdir(tmpdir)
             try:
                 with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}, clear=True):
-                    client = AIClient(model="explicit-model")
-                    assert client.model == "explicit-model"
+                    client = AIClient(model="claude-opus-4-20250514")
+                    assert client.model == "claude-opus-4-20250514"
             finally:
                 os.chdir(old_cwd)
+
+
+class TestAIClientModelValidation:
+    """测试 AIClient 模型验证回退"""
+
+    def test_invalid_model_fallback_to_default(self):
+        """未知模型名称回退到默认模型"""
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}, clear=True):
+            client = AIClient(api_key="test-key", model="unknown-model")
+            assert client.model == "claude-sonnet-4-20250514"
+
+    def test_valid_model_passed_through(self):
+        """有效模型名称直接通过"""
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}, clear=True):
+            client = AIClient(api_key="test-key", model="claude-opus-4-20250514")
+            assert client.model == "claude-opus-4-20250514"
 
 
 class TestWorkerAgentWithAI:

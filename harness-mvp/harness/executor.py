@@ -29,6 +29,7 @@ class ExecutionResult:
     success: bool
     output: str = ""
     error: str = ""
+    model_used: str = ""
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     duration_seconds: float = 0.0
@@ -41,6 +42,7 @@ class ExecutionResult:
             "success": self.success,
             "output": self.output,
             "error": self.error,
+            "model_used": self.model_used,
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "duration_seconds": self.duration_seconds,
@@ -50,15 +52,18 @@ class ExecutionResult:
 class WorkerAgent:
     """工作 Agent - 使用 AI 生成代码执行单个任务"""
 
-    def __init__(self, task: Task, ai_client: Optional[AIClient] = None):
+    def __init__(self, task: Task, ai_client: Optional[AIClient] = None,
+                 role: str = "worker"):
         """初始化 Worker Agent
 
         Args:
             task: 要执行的任务
             ai_client: AI 客户端，默认从环境变量自动创建
+            role: 角色名称，用于按角色选择模型 ("worker", "reviewer", "planner")
         """
         self.task = task
         self.ai_client = ai_client
+        self.role = role
         self.status = "idle"
         self.output: List[str] = []
         self.started_at: Optional[datetime] = None
@@ -94,9 +99,11 @@ class WorkerAgent:
         self.capture_output(f"开始执行任务：{self.task.title}")
 
         success = False
+        model_used = ""
         try:
             self._execute_task(work_dir)
             success = True
+            model_used = self.ai_client.model if self.ai_client else ""
         except Exception as e:
             self.capture_output(f"执行错误：{str(e)}")
 
@@ -110,6 +117,7 @@ class WorkerAgent:
             task_title=self.task.title,
             success=success,
             output="\n".join(self.output),
+            model_used=model_used,
             started_at=self.started_at,
             completed_at=self.completed_at,
             duration_seconds=duration
@@ -123,10 +131,13 @@ class WorkerAgent:
         """
         self.capture_output(f"任务描述：{self.task.description or '无'}")
 
-        # 创建 AI 客户端
+        # 创建 AI 客户端（按角色选择模型）
         if self.ai_client is None:
             try:
-                self.ai_client = AIClient()
+                from harness.config import get_model_for_role, load_config
+                config = load_config(Path.cwd() / ".harness")
+                model = get_model_for_role(config, self.role)
+                self.ai_client = AIClient(model=model)
             except ValueError as e:
                 self.capture_output(str(e))
                 self.capture_output("回退到模拟模式（仅输出任务信息）")

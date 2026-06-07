@@ -5,7 +5,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 
 class ExecutionModePreference(Enum):
@@ -20,6 +20,58 @@ class ExecutionModePreference(Enum):
         return cls[value.upper()]
 
 
+class ModelName(Enum):
+    """支持的 AI 模型枚举"""
+    CLAUDE_SONNET_4_20250514 = "claude-sonnet-4-20250514"
+    CLAUDE_OPUS_4_20250514 = "claude-opus-4-20250514"
+    CLAUDE_HAIKU_4_20250514 = "claude-haiku-4-20250514"
+
+    @classmethod
+    def from_string(cls, value: str) -> "ModelName":
+        """从字符串创建，未知名称抛出 ValueError"""
+        try:
+            return cls(value)
+        except ValueError:
+            raise ValueError(f"未知模型 '{value}'，可用: {[m.value for m in cls]}")
+
+    @classmethod
+    def list_all(cls) -> List["ModelName"]:
+        """返回所有模型"""
+        return list(cls)
+
+    @property
+    def display_name(self) -> str:
+        """人类可读名称"""
+        return {
+            "claude-sonnet-4-20250514": "Claude Sonnet 4",
+            "claude-opus-4-20250514": "Claude Opus 4",
+            "claude-haiku-4-20250514": "Claude Haiku 4",
+        }[self.value]
+
+    @property
+    def cost_per_1k_input(self) -> float:
+        """每 1K 输入 token 成本（美元）"""
+        return {
+            "claude-sonnet-4-20250514": 0.003,
+            "claude-opus-4-20250514": 0.015,
+            "claude-haiku-4-20250514": 0.001,
+        }[self.value]
+
+    @property
+    def cost_per_1k_output(self) -> float:
+        """每 1K 输出 token 成本（美元）"""
+        return {
+            "claude-sonnet-4-20250514": 0.015,
+            "claude-opus-4-20250514": 0.075,
+            "claude-haiku-4-20250514": 0.005,
+        }[self.value]
+
+    @property
+    def is_powerful(self) -> bool:
+        """是否适合复杂推理"""
+        return self in (ModelName.CLAUDE_OPUS_4_20250514,)
+
+
 @dataclass
 class Settings:
     """配置设置"""
@@ -29,18 +81,44 @@ class Settings:
     max_workers: int = 4
     api_key: str = ""
 
+    # 按角色模型覆盖（None = 使用 ai_model）
+    worker_model: Optional[str] = None
+    reviewer_model: Optional[str] = None
+    planner_model: Optional[str] = None
+
     def __post_init__(self):
         """验证和修正字段"""
         if self.max_workers < 1:
             self.max_workers = 1
+        # 验证 ai_model
+        if self.ai_model:
+            try:
+                ModelName.from_string(self.ai_model)
+            except ValueError:
+                self.ai_model = "claude-sonnet-4-20250514"
+        # 验证按角色模型，无效则置 None
+        for field in ('worker_model', 'reviewer_model', 'planner_model'):
+            val = getattr(self, field)
+            if val:
+                try:
+                    ModelName.from_string(val)
+                except ValueError:
+                    setattr(self, field, None)
 
     def to_dict(self) -> Dict[str, Any]:
-        """序列化为字典（排除敏感字段）"""
-        return {
+        """序列化为字典（排除敏感字段，排除 None 角色模型）"""
+        d = {
             "ai_model": self.ai_model,
             "execution_mode": self.execution_mode.value,
             "max_workers": self.max_workers,
         }
+        if self.worker_model:
+            d["worker_model"] = self.worker_model
+        if self.reviewer_model:
+            d["reviewer_model"] = self.reviewer_model
+        if self.planner_model:
+            d["planner_model"] = self.planner_model
+        return d
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Settings":
@@ -54,6 +132,12 @@ class Settings:
             kwargs["max_workers"] = data["max_workers"]
         if "api_key" in data:
             kwargs["api_key"] = data["api_key"]
+        if "worker_model" in data:
+            kwargs["worker_model"] = data["worker_model"]
+        if "reviewer_model" in data:
+            kwargs["reviewer_model"] = data["reviewer_model"]
+        if "planner_model" in data:
+            kwargs["planner_model"] = data["planner_model"]
         return cls(**kwargs)
 
     def merge(self, other: "Settings") -> "Settings":
@@ -67,10 +151,42 @@ class Settings:
             merged.max_workers = other.max_workers
         if other.api_key:
             merged.api_key = other.api_key
+        if other.worker_model is not None:
+            merged.worker_model = other.worker_model
+        if other.reviewer_model is not None:
+            merged.reviewer_model = other.reviewer_model
+        if other.planner_model is not None:
+            merged.planner_model = other.planner_model
         return merged
 
 
 DEFAULT_SETTINGS = Settings()
+
+
+def get_model_for_role(settings: Settings, role: str) -> str:
+    """解析给定角色应使用的 AI 模型
+
+    返回按角色模型（如果已设置），否则返回全局 ai_model。
+
+    Args:
+        settings: 配置设置
+        role: 角色名称 ("worker", "reviewer", "planner")
+
+    Returns:
+        模型名称字符串
+
+    Raises:
+        ValueError: 未知角色
+    """
+    role_map = {
+        "worker": settings.worker_model,
+        "reviewer": settings.reviewer_model,
+        "planner": settings.planner_model,
+    }
+    role_specific = role_map.get(role)
+    if role_specific is None:
+        return settings.ai_model
+    return role_specific
 
 
 class ConfigManager:
@@ -141,7 +257,10 @@ class ConfigManager:
 
         环境变量:
         - ANTHROPIC_API_KEY: API 密钥
-        - HARNESS_AI_MODEL: AI 模型名称
+        - HARNESS_AI_MODEL: 默认 AI 模型
+        - HARNESS_WORKER_MODEL: Worker 角色模型
+        - HARNESS_REVIEWER_MODEL: Reviewer 角色模型
+        - HARNESS_PLANNER_MODEL: Planner 角色模型
 
         Returns:
             覆盖后的配置设置对象
@@ -155,6 +274,18 @@ class ConfigManager:
         env_model = os.environ.get("HARNESS_AI_MODEL")
         if env_model:
             settings.ai_model = env_model
+
+        env_worker = os.environ.get("HARNESS_WORKER_MODEL")
+        if env_worker:
+            settings.worker_model = env_worker
+
+        env_reviewer = os.environ.get("HARNESS_REVIEWER_MODEL")
+        if env_reviewer:
+            settings.reviewer_model = env_reviewer
+
+        env_planner = os.environ.get("HARNESS_PLANNER_MODEL")
+        if env_planner:
+            settings.planner_model = env_planner
 
         return settings
 
