@@ -65,6 +65,14 @@ harness review code src/auth.py
 - ✅ 配置 CLI 命令（show/set/init）
 - ✅ AIClient 从配置读取 AI 模型
 
+### Phase 6: 任务模板系统
+- ✅ 模板数据模型（TaskTemplate, TemplatePrompt）
+- ✅ 内置模板（feature, bugfix, refactor）
+- ✅ 模板存储和加载（TemplateStore）
+- ✅ 模板引擎（TemplateEngine）
+- ✅ 自定义模板支持（.harness/templates/）
+- ✅ CLI 命令集成（plan add --template, template list/show）
+
 ## CLI 命令
 
 ### Plan 命令
@@ -74,9 +82,17 @@ harness review code src/auth.py
 | `harness plan list` | 列出所有任务 |
 | `harness plan show <id>` | 显示任务详情 |
 | `harness plan add` | 添加新任务（交互式或参数式） |
+| `harness plan add --template <name>` | 从模板创建任务 |
 | `harness plan update <id> --status <status>` | 更新任务状态 |
 | `harness plan sync` | 同步到 Plans.md |
 | `harness plan stats` | 显示统计信息 |
+
+### Template 命令
+
+| 命令 | 描述 |
+|------|------|
+| `harness template list` | 列出所有可用模板 |
+| `harness template show <name>` | 显示模板详细信息 |
 
 ### Work 命令
 
@@ -134,6 +150,20 @@ harness plan stats
 ```bash
 # 交互式添加任务
 harness plan add
+
+# 从模板创建任务（交互式）
+harness plan add --template feature
+
+# 从模板创建任务（非交互式）
+harness plan add --template feature \
+  --var feature_name="用户认证" \
+  --var description="实现JWT认证"
+
+# 列出所有模板
+harness template list
+
+# 查看模板详情
+harness template show feature
 
 # 更新任务状态
 harness plan update 1 --status WIP
@@ -292,6 +322,169 @@ result = ReviewResult(
 ```
 
 ## 核心 API
+
+### 任务模板系统
+
+#### 使用内置模板
+
+系统提供 3 种内置模板：
+
+1. **feature** - 功能开发任务
+2. **bugfix** - Bug修复任务
+3. **refactor** - 代码重构任务
+
+```bash
+# 列出所有模板
+harness template list
+
+# 查看模板详情
+harness template show feature
+
+# 使用模板创建任务（交互式）
+harness plan add --template feature
+```
+
+#### 创建自定义模板
+
+自定义模板文件存放在 `.harness/templates/` 目录，使用 JSON 格式。
+
+**模板 JSON 格式**：
+
+```json
+{
+  "name": "template-name",
+  "title": "任务标题 {variable_name}",
+  "description": "任务描述\n可以包含多个 {variables}",
+  "priority": "REQUIRED|RECOMMENDED|OPTIONAL",
+  "estimated_effort": 1-5,
+  "acceptance_criteria": [
+    "验收标准 1",
+    "验收标准 2"
+  ],
+  "prompts": [
+    {
+      "key": "variable_name",
+      "question": "提示用户的问题",
+      "required": true,
+      "multiline": false,
+      "default": "默认值（可选）"
+    }
+  ]
+}
+```
+
+**字段说明**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `name` | string | 是 | 模板唯一标识符，仅包含字母、数字、下划线、连字符 |
+| `title` | string | 是 | 任务标题，可包含 `{variable}` 占位符 |
+| `description` | string | 是 | 任务描述，可包含 `{variable}` 占位符和 Markdown 格式 |
+| `priority` | string | 是 | 优先级：REQUIRED / RECOMMENDED / OPTIONAL |
+| `estimated_effort` | number | 是 | 估算工作量，范围 1-5 |
+| `acceptance_criteria` | array | 否 | 验收标准列表 |
+| `prompts` | array | 是 | 变量提示配置，至少包含一个 |
+
+**Prompt 字段说明**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `key` | string | 是 | 变量名，必须是有效的标识符（字母、数字、下划线） |
+| `question` | string | 是 | 提示用户的问题文本 |
+| `required` | boolean | 否 | 是否必填，默认 true |
+| `multiline` | boolean | 否 | 是否支持多行输入，默认 false |
+| `default` | string | 否 | 默认值，仅对非必填字段有效 |
+
+**自定义模板示例**：
+
+`.harness/templates/documentation.json`:
+
+```json
+{
+  "name": "documentation",
+  "title": "编写 {document_name} 文档",
+  "description": "### 文档内容\n{content}\n\n### 目标读者\n{audience}\n\n### 验收标准\n- [ ] 文档结构清晰\n- [ ] 示例代码完整\n- [ ] 经过审校",
+  "priority": "OPTIONAL",
+  "estimated_effort": 1,
+  "acceptance_criteria": [
+    "文档结构清晰",
+    "示例代码完整",
+    "经过审校"
+  ],
+  "prompts": [
+    {
+      "key": "document_name",
+      "question": "请输入文档名称",
+      "required": true
+    },
+    {
+      "key": "content",
+      "question": "请输入文档内容大纲",
+      "required": true,
+      "multiline": true
+    },
+    {
+      "key": "audience",
+      "question": "请输入目标读者",
+      "required": false,
+      "default": "开发者"
+    }
+  ]
+}
+```
+
+**使用自定义模板**：
+
+```bash
+# 创建模板目录
+mkdir -p .harness/templates
+
+# 创建模板文件
+# 编辑 .harness/templates/documentation.json
+
+# 验证模板已加载
+harness template list
+# 输出应包含：
+#   documentation - 编写文档任务 (自定义)
+
+# 使用自定义模板
+harness plan add --template documentation
+```
+
+**模板验证规则**：
+
+1. **必填字段**：name, title, description, prompts
+2. **name 格式**：仅包含字母、数字、下划线、连字符
+3. **priority 值**：必须是 REQUIRED、RECOMMENDED 或 OPTIONAL
+4. **estimated_effort 范围**：1-5 之间的整数
+5. **变量一致性**：description 中的所有 `{variable}` 必须在 prompts 中定义
+6. **prompt key 格式**：必须是有效的 Python 标识符（字母开头，仅包含字母、数字、下划线）
+
+**模板加载优先级**：
+
+1. 自定义模板（.harness/templates/*.json）
+2. 内置模板（harness/template_loader.py）
+
+如果自定义模板与内置模板同名，自定义模板会覆盖内置模板。
+
+**错误处理**：
+
+```bash
+# 模板不存在
+$ harness plan add --template nonexistent
+❌ 错误: 模板 'nonexistent' 不存在
+可用模板: feature, bugfix, refactor
+
+# 模板验证失败
+$ harness plan add --template invalid
+❌ 错误: 模板验证失败
+- 变量 {unknown_var} 未在 prompts 中定义
+- estimated_effort 必须在 1-5 范围内
+
+# 缺少必填变量（非交互式模式）
+$ harness plan add --template feature --var feature_name="用户认证"
+❌ 错误: 缺少必填变量: {description}
+```
 
 ### TaskStore（任务存储）
 

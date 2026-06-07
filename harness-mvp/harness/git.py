@@ -91,7 +91,7 @@ class GitWorktreeManager:
 
         args = ["worktree", "remove"]
         if force:
-            args.insert(1, "--force")
+            args.append("--force")
         args.append(path)
 
         result = self._run_git(*args)
@@ -264,7 +264,11 @@ class GitWorktreeManager:
             if line.startswith("worktree "):
                 current["path"] = line[9:]
             elif line.startswith("branch "):
-                current["branch"] = line[7:]
+                # 移除 refs/heads/ 前缀
+                branch = line[7:]
+                if branch.startswith("refs/heads/"):
+                    branch = branch[11:]
+                current["branch"] = branch
 
         if current:
             worktrees.append(current)

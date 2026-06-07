@@ -12,6 +12,7 @@ from typing import List, Optional, Dict, Any, Tuple, Type
 from harness.models import Task, TaskStatus
 from harness.ai_client import AIClient
 from harness.prompts import WORKER_SYSTEM_PROMPT, build_work_prompt
+from harness.code_extractor import CodeBlockExtractor
 
 
 class ExecutionMode(Enum):
@@ -166,6 +167,9 @@ class WorkerAgent:
     def _parse_and_write_files(self, response: str, work_dir: str) -> List[str]:
         """解析 AI 响应中的代码块并写入文件
 
+        使用健壮的 CodeBlockExtractor 替代正则表达式。
+        支持多种语言、多代码块、嵌套结构。
+
         Args:
             response: AI 响应文本
             work_dir: 工作目录
@@ -173,21 +177,42 @@ class WorkerAgent:
         Returns:
             写入的文件路径列表
         """
-        # 匹配 ```python:<path> 或 ```python 代码块
-        pattern = r'```python(?::(\S+))?\s*\n(.*?)```'
-        matches = re.findall(pattern, response, re.DOTALL)
-
+        extractor = CodeBlockExtractor()
+        
+        # 提取所有带文件路径的代码块
+        blocks = extractor.extract_with_paths(response)
+        
         written = []
-        for file_path, code in matches:
-            file_path = file_path or "generated.py"
-            file_path = file_path.strip("'\"` ")
-
-            # 写入文件
-            full_path = Path(work_dir) / file_path if work_dir else Path(file_path)
+        
+        for block in blocks:
+            if not block.file_path:
+                continue
+            
+            # 确定完整路径
+            full_path = Path(work_dir) / block.file_path if work_dir else Path(block.file_path)
+            
+            # 创建目录
             full_path.parent.mkdir(parents=True, exist_ok=True)
-            full_path.write_text(code.strip(), encoding='utf-8')
+            
+            # 写入文件
+            full_path.write_text(block.code, encoding='utf-8')
             written.append(str(full_path))
-
+        
+        # 如果没有找到带路径的代码块，尝试提取 Python 代码块并使用默认文件名
+        if not written:
+            python_blocks = extractor.extract_by_language(response, 'python')
+            
+            if python_blocks:
+                # 使用任务 ID 生成默认文件名
+                default_file = f"task_{self.task.id}_generated.py"
+                full_path = Path(work_dir) / default_file if work_dir else Path(default_file)
+                full_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                # 合并所有 Python 代码块
+                combined_code = "\n\n".join(block.code for block in python_blocks)
+                full_path.write_text(combined_code, encoding='utf-8')
+                written.append(str(full_path))
+        
         return written
 
 

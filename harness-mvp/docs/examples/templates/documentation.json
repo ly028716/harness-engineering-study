@@ -1,0 +1,31 @@
+{
+  "name": "documentation",
+  "title": "编写 {document_name} 文档",
+  "description": "### 文档内容\n{content}\n\n### 目标读者\n{audience}\n\n### 验收标准\n- [ ] 文档结构清晰\n- [ ] 示例代码完整\n- [ ] 经过审校",
+  "priority": "OPTIONAL",
+  "estimated_effort": 1,
+  "acceptance_criteria": [
+    "文档结构清晰",
+    "示例代码完整",
+    "经过审校"
+  ],
+  "prompts": [
+    {
+      "key": "document_name",
+      "question": "请输入文档名称",
+      "required": true
+    },
+    {
+      "key": "content",
+      "question": "请输入文档内容大纲",
+      "required": true,
+      "multiline": true
+    },
+    {
+      "key": "audience",
+      "question": "请输入目标读者",
+      "required": false,
+      "default": "开发者"
+    }
+  ]
+}
