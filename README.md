@@ -2,9 +2,9 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.7.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.11%2B-brightgreen.svg)
-![Tests](https://img.shields.io/badge/tests-355%20passed-success.svg)
+![Tests](https://img.shields.io/badge/tests-364%20passed-success.svg)
 ![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
@@ -230,8 +230,8 @@ harness-engineering-study/
 
 | 指标 | 数值 | 状态 |
 |------|------|------|
-| **项目版本** | v0.6.0 | ✅ 功能完整 |
-| **测试数量** | 355 个 | ✅ 全部通过 |
+| **项目版本** | v0.7.0 | ✅ 功能完整 |
+| **测试数量** | 364 个 | ✅ 全部通过 |
 | **核心覆盖率** | 90% | ✅ 超过目标（80%） |
 | **代码行数** | 2,043 行（核心）+ 5,583 行（测试） | ✅ 测试代码 2.7x |
 | **模块数量** | 17 个核心模块 | ✅ 高内聚低耦合 |
@@ -275,7 +275,17 @@ harness-engineering-study/
 - ✅ 变更检测和提交
 - ✅ 91% 测试覆盖率（43 个测试用例）
 
-### 🌟 最新改进（2026-06-07）
+### 🌟 最新改进（2026-06-08）
+
+#### 1. 增量代码审查 🆕 ✅
+   - **新功能**：`harness review incremental` 命令
+   - **智能检测**：自动识别 Git 变更文件（新增和修改）
+   - **灵活对比**：支持三种模式（HEAD~1 默认、--base 指定提交/分支、比较 main）
+   - **完整审查**：使用相同的 5 观点审查框架
+   - **清晰汇总**：严重程度统计 + 最终判定
+   - **测试完善**：9 个专项测试用例，100% 通过
+
+### 🌟 近期改进（2026-06-07）
 
 #### 1. 任务模板系统 🆕 ✅
    - **新增模块**：`templates.py` 和 `template_loader.py`（190 行，86%+ 覆盖）
@@ -324,12 +334,12 @@ harness-engineering-study/
 - ✅ **Phase 5**: 配置和 AI 集成
 - ✅ **Phase 6**: 任务模板系统
 
-### 阶段四：迭代增强（进行中）⏳ 50%
+### 阶段四：迭代增强（进行中）⏳ 60%
 - ✅ 增强 AI 代码提取逻辑（2026-06-05 完成）
 - ✅ 完善 Git 模块测试（2026-06-05 完成）
 - ✅ 实现任务模板系统（2026-06-07 完成）
 - ✅ 创建贡献指南（2026-06-07 完成）
-- ⏳ 实现增量代码审查（P1 中优先级）
+- ✅ 实现增量代码审查（2026-06-08 完成）
 - ⏳ 支持自定义审查规则（P1 中优先级）
 - ⏳ 增加任务依赖可视化（P1 中优先级）
 ### 阶段五：实战应用（持续）⏳ 10%
@@ -598,13 +608,67 @@ else:
 
 **CLI 命令**：
 ```bash
-harness review code <file>     # 审查单个文件
-harness review code --all      # 审查所有变更文件
-harness review plan            # 审查计划合理性
-harness review last            # 查看最近审查结果
+harness review code <file>          # 审查单个文件
+harness review code --all           # 审查所有变更文件
+harness review incremental          # 增量审查（默认比较 HEAD~1）
+harness review incremental --base <ref>  # 增量审查（指定基准）
+harness review plan                 # 审查计划合理性
+harness review last                 # 查看最近审查结果
 ```
 
-**测试覆盖**：100% ✅ （reviewer.py 完全测试通过）
+**增量代码审查（v0.7.0 新增）**：
+
+智能识别并审查变更的文件，提高审查效率：
+
+```bash
+# 审查相比上一次提交的变更
+harness review incremental
+
+# 审查相比指定提交的变更
+harness review incremental --base abc1234
+
+# 审查相比 main 分支的变更
+harness review incremental --base main
+
+# 审查相比特定标签的变更
+harness review incremental --base v1.0.0
+```
+
+**特性**：
+- ✅ 自动检测 Git 变更（新增和修改的文件）
+- ✅ 支持多种基准对比（提交、分支、标签）
+- ✅ 使用相同的 5 观点审查框架
+- ✅ 汇总显示严重程度统计
+- ✅ 最终判定（APPROVE/REQUEST_CHANGES）
+
+**输出示例**：
+
+```
+=== 增量代码审查 ===
+
+基准: HEAD~1
+检测到 3 个变更文件
+
+审查 src/auth.py...
+  发现 1 个问题: 🔴 Critical: 1
+
+审查 src/user.py...
+  发现 2 个问题: 🟡 Major: 2
+
+审查 tests/test_auth.py...
+  ✅ 无问题
+
+=== 汇总 ===
+
+  🔴 Critical: 1
+  🟡 Major: 2
+  🟢 Minor: 0
+  🔵 Info: 0
+
+判定: REQUEST_CHANGES（需要修改）
+```
+
+**测试覆盖**：100% ✅ （reviewer.py + git.py 完全测试通过）
 
 ### 4. 配置系统
 
@@ -1188,10 +1252,10 @@ git push origin feature/your-feature-name
 ### 项目信息
 
 - **项目名称**：Harness Engineering Study
-- **版本**：v0.6.0（最新）
+- **版本**：v0.7.0（最新）
 - **开始日期**：2026-04-08
-- **最后更新**：2026-06-07
-- **当前状态**：✅ MVP 完成（100%），⏳ 迭代增强中（35%）
+- **最后更新**：2026-06-08
+- **当前状态**：✅ MVP 完成（100%），⏳ 迭代增强中（60%）
 - **Git 提交**：100+ 次提交，持续迭代
 - **分支管理**：main（稳定）+ feature 分支（开发）
 
@@ -1199,7 +1263,28 @@ git push origin feature/your-feature-name
 
 ## 📅 版本更新日志
 
-### v0.6.0 (2026-06-07) - 当前版本
+### v0.7.0 (2026-06-08) - 当前版本
+
+**主要更新**：
+- ✅ **新增增量代码审查**：`harness review incremental` 命令，智能识别并审查 Git 变更文件
+  - 支持三种对比模式（HEAD~1 默认、指定提交/分支、比较 main 分支）
+  - 自动检测新增(A)和修改(M)的文件，排除已删除的文件
+  - 使用相同的 5 观点审查框架
+  - 汇总显示严重程度统计和最终判定
+- ✅ **Git 模块增强**：新增 `detect_changes_since()` 方法支持灵活的变更检测
+
+**详细变更**：
+- Git 模块新增 `detect_changes_since(base_ref)` 方法到 GitWorktreeManager 类
+- CLI 新增 `incremental` 子命令到 `review` 命令组，支持 `--base` 选项
+- 新增 `test_incremental_review.py` 测试文件（9 个测试用例）
+- 更新文档：README.md Review 章节、API Reference、Quick Start
+
+**技术指标**：
+- 核心覆盖率：90%（保持）
+- 测试通过率：100%（364/364 ✅）
+- 测试套件增长：+9 个（+2.5%）
+
+### v0.6.0 (2026-06-07)
 
 **主要更新**：
 - ✅ **新增任务模板系统**：feature/bugfix/refactor 三种内置模板 + 自定义支持

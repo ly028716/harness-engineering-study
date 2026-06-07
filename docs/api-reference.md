@@ -1246,16 +1246,109 @@ $ harness template show bugfix
 
 ### 代码审查命令
 
+#### harness review code
+
+审查单个或多个文件的代码质量。
+
 ```bash
 # 审查单个文件
-harness review <file_path>
+harness review code <file_path>
 
 # 审查多个文件
-harness review src/**/*.py
+harness review code src/**/*.py
 
 # 审查并生成报告
-harness review src/ --report
+harness review code src/ --report
 ```
+
+#### harness review incremental
+
+增量代码审查，只审查 Git 变更的文件。
+
+**语法**：
+```bash
+harness review incremental [--base <ref>]
+```
+
+**选项**：
+- `--base <ref>` - 指定基准引用（默认: HEAD~1）
+  - 提交哈希: `abc1234`
+  - 分支名: `main`, `develop`
+  - 标签: `v1.0.0`
+  - 相对引用: `HEAD~2`, `HEAD^^`
+
+**示例**：
+
+```bash
+# 审查相比上一次提交的变更（默认）
+harness review incremental
+
+# 审查相比特定提交的变更
+harness review incremental --base abc1234
+
+# 审查相比 main 分支的变更
+harness review incremental --base main
+
+# 审查相比两次提交前的变更
+harness review incremental --base HEAD~2
+
+# 审查相比特定标签的变更
+harness review incremental --base v1.0.0
+```
+
+**工作原理**：
+
+1. **检测变更**: 使用 `git diff` 识别新增(A)和修改(M)的文件
+2. **过滤文件**: 排除已删除的文件
+3. **逐个审查**: 对每个变更文件应用 5 观点审查
+4. **汇总报告**: 统计问题数量并给出最终判定
+
+**输出格式**：
+
+```
+=== 增量代码审查 ===
+
+基准: HEAD~1
+检测到 3 个变更文件
+
+审查 src/auth.py...
+  发现 1 个问题: 🔴 Critical: 1
+
+审查 src/user.py...
+  发现 2 个问题: 🟡 Major: 2
+
+审查 tests/test_auth.py...
+  ✅ 无问题
+
+=== 汇总 ===
+
+  🔴 Critical: 1
+  🟡 Major: 2
+  🟢 Minor: 0
+  🔵 Info: 0
+
+判定: REQUEST_CHANGES（需要修改）
+```
+
+**错误处理**：
+
+- **无效基准引用**: 如果指定的基准引用不存在，会显示错误信息
+- **无变更文件**: 如果没有检测到变更，会提示"无变更文件"
+- **非 Git 仓库**: 如果不在 Git 仓库中运行，会提示错误
+
+**优势**：
+
+- ✅ **效率提升**: 只审查变更文件，避免重复审查
+- ✅ **灵活对比**: 支持多种基准引用方式
+- ✅ **完整审查**: 使用相同的 5 观点审查标准
+- ✅ **清晰汇总**: 一目了然的问题统计和判定结果
+
+**适用场景**：
+
+- **Pull Request 审查**: 审查相比目标分支的变更
+- **提交前检查**: 审查本次提交的变更
+- **增量开发**: 审查相比上次审查的新变更
+- **版本对比**: 审查两个版本之间的差异
 
 ### 配置命令
 

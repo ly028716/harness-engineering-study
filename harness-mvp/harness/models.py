@@ -198,6 +198,72 @@ class Issue:
 
 
 @dataclass
+class CustomReviewRule:
+    """自定义审查规则
+
+    用户可在 .harness/custom_rules.json 中定义自定义审查规则，
+    使用正则表达式匹配代码，发现违规时报告问题。
+    """
+
+    name: str
+    pattern: str
+    message: str
+    suggestion: str = ""
+    severity: Severity = Severity.MAJOR
+    category: Category = Category.QUALITY
+    file_pattern: str = "*.py"
+    enabled: bool = True
+    description: str = ""
+
+    def matches_file(self, file_path: str) -> bool:
+        """判断规则是否适用于指定文件
+
+        使用 file_pattern (glob 模式) 匹配文件名。
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            是否匹配
+        """
+        from fnmatch import fnmatch
+        return fnmatch(file_path, self.file_pattern)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """序列化为字典"""
+        return {
+            "name": self.name,
+            "pattern": self.pattern,
+            "message": self.message,
+            "suggestion": self.suggestion,
+            "severity": self.severity.value,
+            "category": self.category.value,
+            "file_pattern": self.file_pattern,
+            "enabled": self.enabled,
+            "description": self.description,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "CustomReviewRule":
+        """从字典创建规则"""
+        return cls(
+            name=data["name"],
+            pattern=data["pattern"],
+            message=data.get("message", ""),
+            suggestion=data.get("suggestion", ""),
+            severity=Severity.from_string(data.get("severity", "MAJOR")),
+            category=Category.from_string(data.get("category", "QUALITY")),
+            file_pattern=data.get("file_pattern", "*.py"),
+            enabled=data.get("enabled", True),
+            description=data.get("description", ""),
+        )
+
+    def __str__(self) -> str:
+        status = "✓" if self.enabled else "✗"
+        return f"[{status}] {self.name} ({self.category.value}/{self.severity.value})"
+
+
+@dataclass
 class ReviewResult:
     """代码审查结果数据类"""
 

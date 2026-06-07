@@ -4,7 +4,7 @@ import re
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
-from harness.models import Issue, Severity, Category, Verdict, ReviewResult
+from harness.models import Issue, Severity, Category, Verdict, ReviewResult, CustomReviewRule
 
 
 AI_REVIEW_SYSTEM_PROMPT = """你是一个专业的代码审查助手。你的职责是审查代码并报告问题。
@@ -59,13 +59,16 @@ def determine_verdict(issues: List[Issue]) -> Verdict:
 class ReviewerAgent:
     """代码审查 Agent - 从 5 个观点审查代码"""
 
-    def __init__(self, ai_client: Optional[Any] = None):
+    def __init__(self, ai_client: Optional[Any] = None,
+                 rule_engine: Optional[Any] = None):
         """初始化 Reviewer Agent
 
         Args:
             ai_client: AI 客户端实例，可选。提供后将启用 AI 代码审查。
+            rule_engine: 自定义规则引擎实例，可选。
         """
         self.ai_client = ai_client
+        self.rule_engine = rule_engine
 
     def review_code(self, code: str, file_path: str) -> ReviewResult:
         """审查代码
@@ -89,6 +92,10 @@ class ReviewerAgent:
         # AI 审查（如有 AI 客户端）
         ai_issues = self.ai_review(code, file_path)
         issues.extend(ai_issues)
+
+        # 自定义规则审查
+        custom_issues = self.check_custom_rules(code, file_path)
+        issues.extend(custom_issues)
 
         # 判定 Verdict
         verdict = determine_verdict(issues)
@@ -628,6 +635,23 @@ class ReviewerAgent:
                 break
 
         return issues
+
+    def check_custom_rules(self, code: str, file_path: str):
+        """自定义规则审查
+
+        执行用户定义的自定义审查规则。
+        规则在 .harness/custom_rules.json 中定义。
+
+        Args:
+            code: 代码内容
+            file_path: 文件路径
+
+        Returns:
+            自定义规则发现的问题列表
+        """
+        if self.rule_engine is None:
+            return []
+        return self.rule_engine.evaluate(code, file_path)
 
     def _find_line_number(self, code: str, pattern: str) -> int:
         """查找匹配模式的行号

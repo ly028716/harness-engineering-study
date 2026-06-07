@@ -7,7 +7,25 @@ from harness.store import TaskStore
 from harness.history import HistoryManager
 from harness.executor import TaskExecutionService, select_execution_mode, ExecutionMode
 from harness.reviewer import ReviewerAgent, ReviewResult
+from harness.custom_rules import CustomRuleStore, CustomRuleEngine, RuleNotFoundError, RuleNameConflictError
 from harness.config import ConfigManager, Settings
+
+
+def _load_custom_rule_engine():
+    """加载自定义规则引擎（如果 .harness/custom_rules.json 存在）
+
+    Returns:
+        CustomRuleEngine 实例，或 None
+    """
+    harness_dir = get_harness_dir()
+    rules_file = harness_dir / "custom_rules.json"
+    if not rules_file.exists():
+        return None
+    try:
+        store = CustomRuleStore(harness_dir)
+        return CustomRuleEngine(store)
+    except Exception:
+        return None
 
 
 def get_harness_dir() -> Path:
@@ -682,7 +700,9 @@ def code(file_path, review_all: bool):
             click.echo("没有 Python 文件可审查。")
             return
 
-    reviewer = ReviewerAgent()
+    # 加载自定义规则
+    rule_engine = _load_custom_rule_engine()
+    reviewer = ReviewerAgent(rule_engine=rule_engine)
     all_issues = []
 
     for fp in file_path:
@@ -821,6 +841,132 @@ def last():
         click.echo(f"[{timestamp}] {event_type}: #{task_id} {task_title}")
 
 
+# ===== Custom Review Rules Commands =====
+
+
+@review.group()
+def rule():
+    """自定义审查规则管理"""
+    pass
+
+
+@rule.command("add")
+@click.argument('name')
+@click.option('--pattern', '-p', required=True, help='正则表达式匹配模式')
+@click.option('--message', '-m', required=True, help='问题描述')
+@click.option('--suggestion', '-s', default='', help='修复建议')
+@click.option('--severity', type=click.Choice(['CRITICAL', 'MAJOR', 'MINOR', 'INFO'], case_sensitive=False),
+              default='MAJOR', help='问题严重程度')
+@click.option('--category', type=click.Choice(['SECURITY', 'PERFORMANCE', 'QUALITY', 'ACCESSIBILITY', 'AI_RESIDUALS'],
+                                               case_sensitive=False),
+              default='QUALITY', help='问题类别')
+@click.option('--file-pattern', default='*.py', help='匹配的文件 glob 模式（默认 *.py）')
+@click.option('--description', '-d', default='', help='规则描述')
+def add_rule(name: str, pattern: str, message: str, suggestion: str,
+             severity: str, category: str, file_pattern: str, description: str):
+    """添加自定义审查规则"""
+    harness_dir = get_harness_dir()
+    if not harness_dir.exists():
+        click.echo("错误：未找到 .harness 目录。请先初始化项目。")
+        return
+
+    from harness.models import Severity as SevEnum, Category as CatEnum
+    store = CustomRuleStore(harness_dir)
+
+    rule_data = dict(
+        name=name,
+        pattern=pattern,
+        message=message,
+        suggestion=suggestion,
+        severity=SevEnum.from_string(severity),
+        category=CatEnum.from_string(category),
+        file_pattern=file_pattern,
+        enabled=True,
+        description=description,
+    )
+    from harness.models import CustomReviewRule
+    rule = CustomReviewRule(**rule_data)
+
+    try:
+        store.add_rule(rule)
+        click.echo(f"✅ 自定义规则 '{name}' 创建成功")
+        click.echo(f"   类别: {category} | 严重程度: {severity}")
+        click.echo(f"   文件匹配: {file_pattern}")
+        if description:
+            click.echo(f"   描述: {description}")
+    except RuleNameConflictError as e:
+        click.echo(f"❌ 错误: {e}")
+
+
+@rule.command("list")
+@click.option('--category', '-c',
+              type=click.Choice(['SECURITY', 'PERFORMANCE', 'QUALITY', 'ACCESSIBILITY', 'AI_RESIDUALS'],
+                                case_sensitive=False),
+              help='按类别过滤')
+def list_rules(category: str):
+    """列出自定义审查规则"""
+    harness_dir = get_harness_dir()
+    if not harness_dir.exists():
+        click.echo("错误：未找到 .harness 目录。")
+        return
+
+    from harness.models import Category as CatEnum
+    store = CustomRuleStore(harness_dir)
+    cat = CatEnum.from_string(category) if category else None
+    rules = store.list_rules(category=cat)
+
+    if not rules:
+        click.echo("没有自定义审查规则。")
+        click.echo("使用 'harness review rule add <name> --pattern <regex> --message <msg>' 添加规则。")
+        return
+
+    click.echo(f"\n=== 自定义审查规则 ({len(rules)} 条) ===\n")
+    for rule in rules:
+        status_icon = "✅" if rule.enabled else "⛔"
+        click.echo(f"{status_icon} {rule.name}")
+        click.echo(f"   模式: {rule.pattern}")
+        click.echo(f"   严重程度: {rule.severity.value} | 类别: {rule.category.value}")
+        click.echo(f"   文件匹配: {rule.file_pattern}")
+        if rule.description:
+            click.echo(f"   描述: {rule.description}")
+        click.echo()
+
+
+@rule.command("remove")
+@click.argument('name')
+def remove_rule(name: str):
+    """删除自定义审查规则"""
+    harness_dir = get_harness_dir()
+    if not harness_dir.exists():
+        click.echo("错误：未找到 .harness 目录。")
+        return
+
+    store = CustomRuleStore(harness_dir)
+    try:
+        store.remove_rule(name)
+        click.echo(f"✅ 规则 '{name}' 已删除")
+    except RuleNotFoundError as e:
+        click.echo(f"❌ 错误: {e}")
+
+
+@rule.command("toggle")
+@click.argument('name')
+def toggle_rule(name: str):
+    """启用/禁用自定义审查规则"""
+    harness_dir = get_harness_dir()
+    if not harness_dir.exists():
+        click.echo("错误：未找到 .harness 目录。")
+        return
+
+    store = CustomRuleStore(harness_dir)
+    try:
+        new_state = store.toggle_rule(name)
+        state_str = "启用" if new_state else "禁用"
+        click.echo(f"✅ 规则 '{name}' 已{state_str}")
+    except RuleNotFoundError as e:
+        click.echo(f"❌ 错误: {e}")
+
+
 @review.command()
 @click.option('--base', default='HEAD~1', help='对比基准 (commit/branch/HEAD~N)')
 def incremental(base: str):
@@ -865,7 +1011,8 @@ def incremental(base: str):
     click.echo(f"变更文件: {len(changes)} 个\n")
     
     # 逐文件审查
-    reviewer = ReviewerAgent()
+    rule_engine = _load_custom_rule_engine()
+    reviewer = ReviewerAgent(rule_engine=rule_engine)
     all_results = {}
     total_issues = []
     

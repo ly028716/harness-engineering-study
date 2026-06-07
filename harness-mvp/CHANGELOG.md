@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.7.0 (2026-06-08) - 即将发布
+
+### 新增
+
+- **增量代码审查**: 新增 `harness review incremental` 命令，智能识别并审查 Git 变更文件
+  - 支持三种对比模式：默认比较 HEAD~1、指定提交/分支、比较 main 分支
+  - 自动检测新增(A)和修改(M)的文件，排除已删除的文件
+  - 使用相同的 5 观点审查框架（安全/性能/质量/可访问性/AI残留）
+  - 汇总显示严重程度统计和最终判定
+- Git 模块新增 `detect_changes_since()` 方法，支持检测相对特定基准的变更
+
+### 变更
+
+- CLI 新增 `incremental` 子命令到 `review` 命令组
+- 扩展 Git 集成功能，支持灵活的变更检测
+
+### 测试
+
+- 新增 9 个增量审查测试用例（test_incremental_review.py）
+- 测试套件从 355 扩展至 364 个（+9 个，+2.5%）
+- 核心覆盖率保持 90%
+
+### 文档
+
+- README.md 更新 Review 章节，新增增量审查使用说明
+- API Reference 新增 `harness review incremental` 命令完整文档
+- Quick Start 新增增量审查实战示例（提交前检查、PR审查、版本对比）
+
 ## 0.6.0 (2026-06-05)
 
 ### 变更

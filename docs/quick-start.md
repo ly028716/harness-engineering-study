@@ -225,6 +225,11 @@ harness review code src/auth.py src/user.py
 # 审查所有 Python 文件
 harness review code --all
 
+# 增量审查（只审查变更文件）✨ 新功能
+harness review incremental                  # 默认比较 HEAD~1
+harness review incremental --base main      # 比较 main 分支
+harness review incremental --base abc1234   # 比较特定提交
+
 # 审查计划
 harness review plan
 
@@ -271,6 +276,56 @@ harness review last
 - **QUALITY** - 质量（过长函数、缺失文档）
 - **ACCESSIBILITY** - 可访问性（缺少 alt/role/label）
 - **AI_RESIDUALS** - AI 残留（TODO、mock 数据、localhost）
+
+## 增量审查示例（v0.7.0 新增）
+
+在实际开发中，增量审查可以显著提高效率：
+
+### 场景1：提交前检查
+
+```bash
+# 1. 修改了一些文件
+git status
+# modified: src/auth.py
+# modified: src/user.py
+# new file: tests/test_auth.py
+
+# 2. 增量审查变更
+harness review incremental
+
+# 3. 根据审查结果修复问题
+# ...
+
+# 4. 再次审查确认通过
+harness review incremental
+```
+
+### 场景2：Pull Request 审查
+
+```bash
+# 1. 切换到 feature 分支
+git checkout feature/user-auth
+
+# 2. 审查相比 main 分支的所有变更
+harness review incremental --base main
+
+# 3. 查看汇总报告
+=== 增量代码审查 ===
+基准: main
+检测到 5 个变更文件
+...
+判定: APPROVE（可以合并）
+```
+
+### 场景3：版本对比
+
+```bash
+# 审查从 v1.0.0 到现在的所有变更
+harness review incremental --base v1.0.0
+
+# 审查最近两次提交的变更
+harness review incremental --base HEAD~2
+```
 
 ## 数据存储
 
