@@ -1,8 +1,16 @@
 # Changelog
 
-## 0.7.0 (2026-06-08) - 即将发布
+## 0.7.0 (2026-06-09) - 即将发布
 
 ### 新增
+
+- **多 AI 模型配置**: 支持按角色（Worker/Reviewer/Planner）分配不同 AI 模型
+  - 新增 `ModelName` 枚举（Sonnet/Opus/Haiku），含成本信息和模型验证
+  - Settings 新增 worker_model/reviewer_model/planner_model 字段
+  - CLI 新增 `config model list/show/set` 命令组
+  - 环境变量覆盖：HARNESS_WORKER_MODEL / REVIEWER / PLANNER
+  - AIClient 自动验证模型名称，未知模型回退到默认
+  - WorkerAgent 支持 role 参数，按角色选择模型
 
 - **增量代码审查**: 新增 `harness review incremental` 命令，智能识别并审查 Git 变更文件
   - 支持三种对比模式：默认比较 HEAD~1、指定提交/分支、比较 main 分支
