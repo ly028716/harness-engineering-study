@@ -149,3 +149,73 @@ class TestHistoryManager:
 
         duration = history.get_task_duration(999)
         assert duration == 0
+
+    # ===== 向后兼容性测试（Phase 7 性能监控新增） =====
+
+    def test_log_task_completed_backward_compat(self, tmp_path):
+        """RED: 旧调用方式（无 model_used/success）仍然兼容"""
+        harness_dir = tmp_path / ".harness"
+        history = HistoryManager(harness_dir)
+
+        task = Task(id=1, title="Test Task", status=TaskStatus.DONE)
+        history.log_task_completed(task, duration_minutes=30)
+
+        events = history.get_all_events()
+        assert len(events) == 1
+        assert events[0]["event"] == "task_completed"
+        assert events[0]["duration_minutes"] == 30
+        # 新字段应存在但有默认值
+        assert "model_used" in events[0]
+        assert "success" in events[0]
+
+    def test_log_task_completed_with_model_used(self, tmp_path):
+        """RED: 记录 model_used 字段"""
+        harness_dir = tmp_path / ".harness"
+        history = HistoryManager(harness_dir)
+
+        task = Task(id=1, title="Test Task")
+        history.log_task_completed(task, duration_minutes=15,
+                                   model_used="claude-sonnet-4-20250514")
+
+        events = history.get_all_events()
+        assert events[0]["model_used"] == "claude-sonnet-4-20250514"
+
+    def test_log_task_completed_with_success_false(self, tmp_path):
+        """RED: 记录成功/失败状态"""
+        harness_dir = tmp_path / ".harness"
+        history = HistoryManager(harness_dir)
+
+        task = Task(id=1, title="Failed Task")
+        history.log_task_completed(task, duration_minutes=5, success=False)
+
+        events = history.get_all_events()
+        assert events[0]["success"] is False
+
+    def test_get_completed_events(self, tmp_path):
+        """RED: 获取任务完成事件"""
+        harness_dir = tmp_path / ".harness"
+        history = HistoryManager(harness_dir)
+
+        task = Task(id=1, title="Task 1")
+        history.log_task_created(task)
+        history.log_task_completed(task, duration_minutes=30)
+
+        task2 = Task(id=2, title="Task 2")
+        history.log_task_completed(task2, duration_minutes=15)
+
+        completed = history.get_completed_events()
+        assert len(completed) == 2
+        assert all(e["event"] == "task_completed" for e in completed)
+
+    def test_get_completed_events_filters_other_events(self, tmp_path):
+        """RED: get_completed_events 只返回完成事件"""
+        harness_dir = tmp_path / ".harness"
+        history = HistoryManager(harness_dir)
+
+        task = Task(id=1, title="Task 1")
+        history.log_task_created(task)
+        history.log_task_updated(task, ["status"])
+        history.log_task_completed(task, duration_minutes=30)
+
+        completed = history.get_completed_events()
+        assert len(completed) == 1

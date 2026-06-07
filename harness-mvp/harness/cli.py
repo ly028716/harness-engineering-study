@@ -1235,5 +1235,169 @@ def incremental(base: str):
         click.echo("\n最终判定: ✅ APPROVE (批准)")
 
 
+# ===== Performance 命令组 (Phase 7) =====
+
+
+@main.group()
+def performance():
+    """性能监控命令"""
+    pass
+
+
+@performance.command("summary")
+def performance_summary():
+    """显示性能摘要"""
+    harness_dir = get_harness_dir()
+
+    if not harness_dir.exists():
+        click.echo("错误：未找到 .harness 目录。")
+        return
+
+    from harness.performance import PerformanceMonitor
+    monitor = PerformanceMonitor(harness_dir)
+    metrics = monitor.get_summary()
+
+    click.echo("\n=== 性能摘要 ===\n")
+
+    if metrics.total_completed == 0 and metrics.total_tasks == 0:
+        click.echo("暂无数据。完成任务后再次查看。")
+        return
+
+    click.echo(f"总任务数：{metrics.total_tasks}")
+    click.echo(f"已完成：{metrics.completed_tasks}")
+    click.echo(f"成功率：{metrics.success_rate}%")
+    click.echo()
+
+    if metrics.total_completed > 0:
+        click.echo(f"总耗时：{metrics.total_duration_minutes:.0f} 分钟")
+        click.echo(f"平均耗时：{metrics.avg_duration_minutes:.1f} 分钟")
+        click.echo(f"最短耗时：{metrics.min_duration_minutes:.0f} 分钟")
+        click.echo(f"最长耗时：{metrics.max_duration_minutes:.0f} 分钟")
+        click.echo(f"中位耗时：{metrics.median_duration_minutes:.1f} 分钟")
+        click.echo()
+        click.echo(f"完成：{metrics.total_completed} 个，失败：{metrics.total_failed} 个")
+
+    if metrics.effort_accuracy > 0:
+        click.echo(f"\n工作量准确度：{metrics.effort_accuracy}%")
+
+    if metrics.bottleneck_tasks:
+        click.echo(f"\n瓶颈任务（最长耗时 TOP {len(metrics.bottleneck_tasks)}）：")
+        for bt in metrics.bottleneck_tasks:
+            click.echo(f"  #{bt['task_id']} {bt['task_title']} - {bt['duration_minutes']} 分钟")
+
+
+@performance.command("model-usage")
+def performance_model_usage():
+    """显示模型使用统计"""
+    harness_dir = get_harness_dir()
+
+    if not harness_dir.exists():
+        click.echo("错误：未找到 .harness 目录。")
+        return
+
+    from harness.performance import PerformanceMonitor
+    monitor = PerformanceMonitor(harness_dir)
+    stats = monitor.get_model_usage()
+
+    if not stats:
+        click.echo("\n暂无模型使用数据。")
+        return
+
+    click.echo("\n=== 模型使用统计 ===\n")
+    for s in stats:
+        click.echo(f"模型：{s.model_name}")
+        click.echo(f"  任务数：{s.task_count}")
+        click.echo(f"  平均耗时：{s.avg_duration_seconds:.1f} 秒")
+        click.echo(f"  成功：{s.success_count}，失败：{s.failure_count}")
+        click.echo(f"  成功率：{s.success_rate}%")
+        click.echo()
+
+
+@performance.command()
+@click.argument('task_id', type=int)
+def task(task_id: int):
+    """显示单个任务的时序信息"""
+    harness_dir = get_harness_dir()
+
+    if not harness_dir.exists():
+        click.echo("错误：未找到 .harness 目录。")
+        return
+
+    from harness.performance import PerformanceMonitor
+    monitor = PerformanceMonitor(harness_dir)
+    timing = monitor.get_task_timing(task_id)
+
+    if not timing:
+        click.echo(f"未找到任务 #{task_id}")
+        return
+
+    click.echo(f"\n=== 任务 #{task_id} 时序信息 ===\n")
+    click.echo(f"标题：{timing['title']}")
+    click.echo(f"状态：{timing['status']}")
+    click.echo(f"估算工作量：{timing['estimated_effort']}")
+    click.echo(f"实际工作量：{timing['actual_effort'] or '未记录'}")
+    click.echo(f"耗时：{timing['duration_minutes']} 分钟")
+    click.echo(f"使用模型：{timing['model_used'] or '未记录'}")
+    click.echo(f"事件数：{timing['event_count']}")
+
+
+@performance.command()
+@click.option('--top', '-t', default=5, help='显示前 N 个瓶颈任务')
+def bottlenecks(top: int):
+    """显示耗时最长的任务（瓶颈分析）"""
+    harness_dir = get_harness_dir()
+
+    if not harness_dir.exists():
+        click.echo("错误：未找到 .harness 目录。")
+        return
+
+    from harness.performance import PerformanceMonitor
+    monitor = PerformanceMonitor(harness_dir)
+    metrics = monitor.get_summary(top_n=top)
+    bottleneck_list = metrics.bottleneck_tasks
+
+    if not bottleneck_list:
+        click.echo("\n暂无瓶颈任务数据。")
+        return
+
+    click.echo(f"\n=== 瓶颈任务 TOP {len(bottleneck_list)} ===\n")
+    for i, bt in enumerate(bottleneck_list, 1):
+        click.echo(f"{i}. #{bt['task_id']} {bt['task_title']}")
+        click.echo(f"   耗时：{bt['duration_minutes']} 分钟")
+        if bt.get('model_used'):
+            click.echo(f"   模型：{bt['model_used']}")
+        click.echo()
+
+
+@performance.command()
+def effort():
+    """显示工作量分析（估算 vs 实际）"""
+    harness_dir = get_harness_dir()
+
+    if not harness_dir.exists():
+        click.echo("错误：未找到 .harness 目录。")
+        return
+
+    from harness.performance import PerformanceMonitor
+    monitor = PerformanceMonitor(harness_dir)
+    analysis = monitor.get_effort_analysis()
+
+    if analysis["total_tasks_completed"] == 0:
+        click.echo("\n暂无已完成的任务数据。")
+        return
+
+    click.echo("\n=== 工作量分析 ===\n")
+    click.echo(f"已完成任务：{analysis['total_tasks_completed']}")
+    click.echo(f"总估算工时：{analysis['estimated_total_hours']}")
+    click.echo(f"总实际工时：{analysis['actual_total_hours']}")
+    click.echo(f"准确度：{analysis['accuracy_percent']}%")
+
+    if analysis["over_estimated_tasks"]:
+        click.echo(f"\n超出估算的任务（TOP {len(analysis['over_estimated_tasks'])}）：")
+        for oe in analysis["over_estimated_tasks"]:
+            click.echo(f"  #{oe['task_id']} {oe['title']}")
+            click.echo(f"    估算：{oe['estimated']}，实际：{oe['actual']}（{oe['ratio']}x）")
+
+
 if __name__ == '__main__':
     main()

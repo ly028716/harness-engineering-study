@@ -77,12 +77,15 @@ class HistoryManager:
         }
         self._add_event(event)
 
-    def log_task_completed(self, task: Task, duration_minutes: int = 0):
+    def log_task_completed(self, task: Task, duration_minutes: int = 0,
+                           model_used: str = "", success: bool = True):
         """记录任务完成事件
 
         Args:
             task: 任务对象
             duration_minutes: 持续时间（分钟）
+            model_used: 使用的 AI 模型名称
+            success: 是否成功
         """
         event = {
             "timestamp": datetime.now().isoformat(),
@@ -90,6 +93,8 @@ class HistoryManager:
             "task_id": task.id,
             "task_title": task.title,
             "duration_minutes": duration_minutes,
+            "model_used": model_used,
+            "success": success,
         }
         self._add_event(event)
 
@@ -171,6 +176,14 @@ class HistoryManager:
     def clear_history(self):
         """清空历史记录"""
         self._write_events([])
+
+    def get_completed_events(self) -> List[Dict[str, Any]]:
+        """获取所有任务完成事件
+
+        Returns:
+            任务完成事件列表
+        """
+        return self.get_events_by_type("task_completed")
 
     def get_task_duration(self, task_id: int) -> int:
         """获取任务持续时间

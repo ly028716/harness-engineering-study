@@ -455,8 +455,12 @@ class TaskExecutionService:
                     # 根据执行结果更新任务状态
                     if result.success:
                         task.complete()
+                        task.actual_effort = int(result.duration_seconds / 60)
                         self.store.update_task(task)
-                        self.history.log_task_completed(task, int(result.duration_seconds / 60))
+                        self.history.log_task_completed(
+                            task, int(result.duration_seconds / 60),
+                            model_used=result.model_used, success=result.success
+                        )
         else:
             executor = ParallelExecutor(self.work_dir)
             for batch in batches:
@@ -473,9 +477,13 @@ class TaskExecutionService:
                 for task, result in zip(batch, results):
                     if result.success:
                         task.complete()
+                        task.actual_effort = int(result.duration_seconds / 60)
                     self.store.update_task(task)
                     if result.success:
-                        self.history.log_task_completed(task, int(result.duration_seconds / 60))
+                        self.history.log_task_completed(
+                            task, int(result.duration_seconds / 60),
+                            model_used=result.model_used, success=result.success
+                        )
 
         return all_results
 
@@ -503,8 +511,12 @@ class TaskExecutionService:
         # 根据执行结果更新任务状态
         if result.success:
             task.complete()
+            task.actual_effort = int(result.duration_seconds / 60)
             self.store.update_task(task)
-            self.history.log_task_completed(task, int(result.duration_seconds / 60))
+            self.history.log_task_completed(
+                task, int(result.duration_seconds / 60),
+                model_used=result.model_used, success=result.success
+            )
 
         return result
 
@@ -536,7 +548,11 @@ class TaskExecutionService:
         for task, result in zip(tasks, results):
             if result.success:
                 task.complete()
+                task.actual_effort = int(result.duration_seconds / 60)
                 self.store.update_task(task)
-                self.history.log_task_completed(task, int(result.duration_seconds / 60))
+                self.history.log_task_completed(
+                    task, int(result.duration_seconds / 60),
+                    model_used=result.model_used, success=result.success
+                )
 
         return results
