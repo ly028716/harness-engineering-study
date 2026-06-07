@@ -80,6 +80,10 @@ harness review code src/auth.py
 - ✅ 多 AI 模型配置（按角色分配 Worker/Reviewer/Planner 模型）
 - ✅ ModelName 枚举（含成本信息和模型验证）
 - ✅ 模型管理 CLI 命令（config model list/show/set）
+- ✅ 性能监控（PerformanceMonitor 聚合分析）
+- ✅ 模型使用统计（每模型任务数、成功率、平均耗时）
+- ✅ 瓶颈任务识别（最长耗时 TOP N）
+- ✅ 工作量偏差分析（估算 vs 实际）
 
 ## CLI 命令
 
@@ -136,6 +140,16 @@ harness review code src/auth.py
 | `harness review rule list` | 列出自定义审查规则 |
 | `harness review rule remove <name>` | 删除自定义审查规则 |
 | `harness review rule toggle <name>` | 启用/禁用自定义规则 |
+
+### Performance 命令
+
+| 命令 | 描述 |
+|------|------|
+| `harness performance summary` | 显示性能摘要（总耗时/成功率/瓶颈） |
+| `harness performance model-usage` | 显示模型使用统计 |
+| `harness performance task <id>` | 显示任务时序信息 |
+| `harness performance bottlenecks` | 显示瓶颈任务（最长耗时） |
+| `harness performance effort` | 显示工作量分析（估算 vs 实际） |
 
 ## 使用示例
 
@@ -261,6 +275,25 @@ harness review rule add check-debug \
 harness review last
 ```
 
+### Performance 性能监控
+
+```bash
+# 性能摘要
+harness performance summary
+
+# 模型使用统计
+harness performance model-usage
+
+# 查看单个任务时序
+harness performance task 1
+
+# 瓶颈分析
+harness performance bottlenecks --top 10
+
+# 工作量偏差分析
+harness performance effort
+```
+
 ## 项目结构
 
 ```
@@ -284,13 +317,15 @@ harness-mvp/
 │   ├── dependency_graph.py # 依赖可视化
 │   ├── custom_rules.py  # 自定义审查规则
 │   ├── templates.py     # 模板引擎
-│   └── template_loader.py # 模板加载
-├── tests/               # 测试套件（471 个测试）
+│   ├── template_loader.py # 模板加载
+│   └── performance.py   # 性能监控
+├── tests/               # 测试套件（514 个测试）
 │   ├── test_cli.py
 │   ├── test_cli_phase2.py
 │   ├── test_cli_phase4.py
 │   ├── test_cli_config.py
 │   ├── test_cli_templates.py
+│   ├── test_cli_performance.py
 │   ├── test_ai_integration.py
 │   ├── test_models.py
 │   ├── test_store.py
@@ -306,6 +341,7 @@ harness-mvp/
 │   ├── test_dependency_graph.py
 │   ├── test_custom_rules.py
 │   ├── test_incremental_review.py
+│   ├── test_performance.py
 │   ├── test_integration.py
 │   └── test_templates.py
 ├── .harness/            # 数据目录
@@ -645,6 +681,32 @@ model = get_model_for_role(settings, "worker")  # → "claude-haiku-4-20250514"
 model = get_model_for_role(settings, "reviewer")  # → "claude-sonnet-4-20250514"（回退到全局）
 ```
 
+### PerformanceMonitor（性能监控）
+
+```python
+from harness.performance import PerformanceMonitor
+
+monitor = PerformanceMonitor(Path(".harness"))
+
+# 性能摘要
+metrics = monitor.get_summary()
+print(f"总耗时：{metrics.total_duration_minutes:.0f} 分钟")
+print(f"成功率：{metrics.success_rate}%")
+print(f"瓶颈任务：{len(metrics.bottleneck_tasks)} 个")
+
+# 模型使用统计
+for stat in monitor.get_model_usage():
+    print(f"{stat.model_name}: {stat.task_count} 次, {stat.success_rate}% 成功率")
+
+# 单个任务时序
+timing = monitor.get_task_timing(1)
+print(f"耗时：{timing['duration_minutes']} 分钟")
+
+# 工作量分析
+analysis = monitor.get_effort_analysis()
+print(f"准确度：{analysis['accuracy_percent']}%")
+```
+
 ## 测试
 
 ### 运行所有测试
@@ -661,10 +723,11 @@ pytest tests/ --cov=harness --cov-report=term-missing
 
 ### 测试结果
 
-- ✅ 471 个测试全部通过
+- ✅ 514 个测试全部通过
 - ✅ 核心模块覆盖率：config.py 89%, executor.py 84%, models.py 83%, git.py 92%
 - ✅ dependency_graph.py 覆盖率：97%
 - ✅ reviewer.py 覆盖率：100%
+- ✅ history.py 覆盖率：95%
 - ✅ 涵盖：单元测试、集成测试、CLI 测试、AI 集成测试
 
 ## 技术栈
@@ -719,6 +782,33 @@ harness plan graph --output report
 # Planner → Opus（复杂规划）
 # 未配置的角色自动回退到全局默认模型
 model = get_model_for_role(settings, "worker")
+```
+
+### 性能监控
+
+```bash
+# 性能摘要
+harness performance summary
+
+# 模型使用统计
+harness performance model-usage
+
+# 瓶颈任务 TOP 5
+harness performance bottlenecks --top 5
+
+# 工作量偏差分析
+harness performance effort
+```
+
+```python
+from harness.performance import PerformanceMonitor
+
+monitor = PerformanceMonitor(Path(".harness"))
+
+# 聚合分析（只读，不修改任何数据）
+metrics = monitor.get_summary()
+model_stats = monitor.get_model_usage()
+effort_analysis = monitor.get_effort_analysis()
 ```
 
 ### Verdict 判定
@@ -834,4 +924,4 @@ MIT License
 
 **版本**: 0.7.0
 **状态**: Phase 1-7 全部完成 ✅
-**测试**: 471 个测试
+**测试**: 514 个测试
