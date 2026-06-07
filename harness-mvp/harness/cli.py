@@ -8,6 +8,7 @@ from harness.history import HistoryManager
 from harness.executor import TaskExecutionService, select_execution_mode, ExecutionMode
 from harness.reviewer import ReviewerAgent, ReviewResult
 from harness.custom_rules import CustomRuleStore, CustomRuleEngine, RuleNotFoundError, RuleNameConflictError
+from harness.dependency_graph import generate_mermaid_graph, generate_graph_report, find_critical_path
 from harness.config import ConfigManager, Settings
 
 
@@ -306,6 +307,36 @@ def add(template: str, variables, title: str, description: str, priority: str, e
         history.log_task_created(task)
 
         click.echo(f"已添加任务 #{task_id}: {task.title}")
+
+
+@plan.command()
+@click.option('--output', '-o', type=click.Choice(['mermaid', 'report'], case_sensitive=False),
+              default='mermaid', help='输出格式：mermaid 图表或文本分析报告')
+def graph(output: str):
+    """显示任务依赖图
+
+    生成 Mermaid 格式的任务依赖关系图或文本分析报告，
+    包含循环依赖检测和关键路径分析。
+    """
+    harness_dir = get_harness_dir()
+
+    if not harness_dir.exists():
+        click.echo("错误：未找到 .harness 目录。请先创建计划。")
+        return
+
+    store = TaskStore(harness_dir)
+    tasks = store.load_tasks()
+
+    if not tasks:
+        click.echo("没有任务。使用 'harness plan add' 添加任务。")
+        return
+
+    if output == 'mermaid':
+        click.echo("\n=== 任务依赖图 (Mermaid) ===\n")
+        click.echo(generate_mermaid_graph(tasks))
+        click.echo("\n将以上内容粘贴到支持 Mermaid 的编辑器（如 Notion、GitHub）中查看依赖图。")
+    else:
+        click.echo(generate_graph_report(tasks))
 
 
 @plan.command("stats")
