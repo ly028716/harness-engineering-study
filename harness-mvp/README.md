@@ -7,9 +7,9 @@
 这是一个从零开始构建的 Agent Harness，展示了如何通过约束设计和工具编排来引导 AI 自主完成软件开发任务。
 
 **核心理念**：
-- **Plan**：智能任务规划和分解
-- **Work**：自动化任务执行（Solo/Parallel 模式）
-- **Review**：5 观点代码审查（安全、性能、质量、可访问性、AI 残留）
+- **Plan**：智能任务规划和分解（含依赖可视化和关键路径分析）
+- **Work**：自动化任务执行（Solo/Parallel 模式，按角色选择 AI 模型）
+- **Review**：5 观点代码审查（安全、性能、质量、可访问性、AI 残留，支持增量审查和自定义规则）
 
 ## 快速开始
 
@@ -48,16 +48,18 @@ harness review code src/auth.py
 
 ### Phase 3: Work 功能
 - ✅ 执行引擎（ExecutionEngine）
-- ✅ Worker Agent
+- ✅ Worker Agent（按角色选择 AI 模型）
 - ✅ Solo/Parallel 执行模式
 - ✅ Git 工作区集成
 - ✅ 依赖关系处理（拓扑排序）
 
 ### Phase 4: Review 功能
-- ✅ Reviewer Agent
+- ✅ Reviewer Agent（支持 AI 辅助审查）
 - ✅ 5 观点审查（安全、性能、质量、可访问性、AI 残留）
 - ✅ Verdict 判定（Critical ≥ 1 或 Major ≥ 2 → REQUEST_CHANGES）
 - ✅ 审查报告生成
+- ✅ 增量代码审查（基于 Git 变更）
+- ✅ 自定义审查规则（正则表达式模式匹配）
 
 ### Phase 5: 配置系统和 AI 集成
 - ✅ 配置系统（ConfigManager, Settings）
@@ -73,6 +75,12 @@ harness review code src/auth.py
 - ✅ 自定义模板支持（.harness/templates/）
 - ✅ CLI 命令集成（plan add --template, template list/show）
 
+### Phase 7: 高级功能
+- ✅ 任务依赖可视化（Mermaid 图、关键路径分析、循环检测）
+- ✅ 多 AI 模型配置（按角色分配 Worker/Reviewer/Planner 模型）
+- ✅ ModelName 枚举（含成本信息和模型验证）
+- ✅ 模型管理 CLI 命令（config model list/show/set）
+
 ## CLI 命令
 
 ### Plan 命令
@@ -86,6 +94,7 @@ harness review code src/auth.py
 | `harness plan update <id> --status <status>` | 更新任务状态 |
 | `harness plan sync` | 同步到 Plans.md |
 | `harness plan stats` | 显示统计信息 |
+| `harness plan graph` | 显示任务依赖图（Mermaid/文本报告） |
 
 ### Template 命令
 
@@ -110,6 +119,9 @@ harness review code src/auth.py
 | `harness config show` | 显示当前配置 |
 | `harness config set <key> <value>` | 更新配置项 |
 | `harness config init` | 重置为默认配置 |
+| `harness config model list` | 列出可用 AI 模型及成本 |
+| `harness config model show` | 显示各角色模型配置 |
+| `harness config model set <role> <model>` | 设置角色模型 |
 
 ### Review 命令
 
@@ -117,8 +129,13 @@ harness review code src/auth.py
 |------|------|
 | `harness review code <file>` | 审查代码文件 |
 | `harness review code --all` | 审查所有变更文件 |
+| `harness review incremental` | 增量审查 Git 变更 |
 | `harness review plan` | 审查计划合理性 |
 | `harness review last` | 显示最近审查结果 |
+| `harness review rule add <name>` | 添加自定义审查规则 |
+| `harness review rule list` | 列出自定义审查规则 |
+| `harness review rule remove <name>` | 删除自定义审查规则 |
+| `harness review rule toggle <name>` | 启用/禁用自定义规则 |
 
 ## 使用示例
 
@@ -207,6 +224,12 @@ harness config set max_workers 8
 
 # 重置为默认配置
 harness config init
+
+# AI 模型管理
+harness config model list          # 列出可用模型及成本
+harness config model show          # 显示各角色模型配置
+harness config model set worker claude-haiku-4-20250514    # Worker 用轻量模型
+harness config model set reviewer claude-opus-4-20250514   # Reviewer 用最强模型
 ```
 
 ### Review 审查
@@ -224,6 +247,16 @@ harness review code --all
 # 审查计划
 harness review plan
 
+# 增量审查（Git 变更）
+harness review incremental              # 最近一次提交
+harness review incremental --base main  # 与 main 分支对比
+
+# 自定义审查规则
+harness review rule add check-debug \
+  --pattern "print\(.*\)" \
+  --message "检测到调试输出" \
+  --severity MAJOR
+
 # 查看最近审查
 harness review last
 ```
@@ -233,10 +266,10 @@ harness review last
 ```
 harness-mvp/
 ├── harness/              # 核心包
-│   ├── __init__.py      # 版本：0.6.0
+│   ├── __init__.py      # 版本：0.7.0
 │   ├── cli.py           # CLI 入口点
 │   ├── ai_client.py     # AI 客户端
-│   ├── config.py        # 配置管理
+│   ├── config.py        # 配置管理（含 ModelName 枚举）
 │   ├── models.py        # 数据模型
 │   ├── store.py         # 任务存储
 │   ├── history.py       # 历史记录
@@ -245,12 +278,19 @@ harness-mvp/
 │   ├── git.py           # Git 集成
 │   ├── reviewer.py      # Reviewer Agent
 │   ├── parser.py        # Markdown 解析器
-│   └── state.py         # 状态管理器
-├── tests/               # 测试套件（272 个测试，86% 覆盖率）
+│   ├── state.py         # 状态管理器
+│   ├── prompts.py       # 提示词模板
+│   ├── code_extractor.py # 代码块提取器
+│   ├── dependency_graph.py # 依赖可视化
+│   ├── custom_rules.py  # 自定义审查规则
+│   ├── templates.py     # 模板引擎
+│   └── template_loader.py # 模板加载
+├── tests/               # 测试套件（471 个测试）
 │   ├── test_cli.py
 │   ├── test_cli_phase2.py
 │   ├── test_cli_phase4.py
 │   ├── test_cli_config.py
+│   ├── test_cli_templates.py
 │   ├── test_ai_integration.py
 │   ├── test_models.py
 │   ├── test_store.py
@@ -261,7 +301,13 @@ harness-mvp/
 │   ├── test_parser.py
 │   ├── test_state.py
 │   ├── test_config.py
-│   └── test_integration.py
+│   ├── test_model_config.py
+│   ├── test_git.py
+│   ├── test_dependency_graph.py
+│   ├── test_custom_rules.py
+│   ├── test_incremental_review.py
+│   ├── test_integration.py
+│   └── test_templates.py
 ├── .harness/            # 数据目录
 │   ├── state.json       # 当前状态
 │   ├── tasks.json       # 任务数据
@@ -551,6 +597,54 @@ for issue in result.issues:
         print(f"  建议：{issue.suggestion}")
 ```
 
+### 多 AI 模型配置
+
+系统支持按角色（Worker/Reviewer/Planner）分配不同的 AI 模型，实现成本优化和任务适配。
+
+#### 配置方式（优先级从低到高）
+
+1. **代码默认值**：`claude-sonnet-4-20250514`
+2. **config.json 文件**：`.harness/config.json`
+3. **环境变量**：`HARNESS_WORKER_MODEL` 等
+4. **显式参数**：`AIClient(model="...")`
+
+#### 配置文件示例
+
+```json
+{
+  "ai_model": "claude-sonnet-4-20250514",
+  "worker_model": "claude-haiku-4-20250514",
+  "reviewer_model": "claude-opus-4-20250514",
+  "planner_model": "claude-opus-4-20250514"
+}
+```
+
+#### 环境变量
+
+```bash
+export HARNESS_WORKER_MODEL=claude-haiku-4-20250514
+export HARNESS_REVIEWER_MODEL=claude-opus-4-20250514
+export HARNESS_PLANNER_MODEL=claude-opus-4-20250514
+```
+
+#### Python API
+
+```python
+from harness.config import ModelName, get_model_for_role, Settings
+
+# 枚举信息
+for m in ModelName.list_all():
+    print(f"{m.display_name}: 输入 ${m.cost_per_1k_input}/1K, 输出 ${m.cost_per_1k_output}/1K")
+
+# 按角色解析模型
+settings = Settings(
+    ai_model="claude-sonnet-4-20250514",
+    worker_model="claude-haiku-4-20250514",
+)
+model = get_model_for_role(settings, "worker")  # → "claude-haiku-4-20250514"
+model = get_model_for_role(settings, "reviewer")  # → "claude-sonnet-4-20250514"（回退到全局）
+```
+
 ## 测试
 
 ### 运行所有测试
@@ -567,9 +661,11 @@ pytest tests/ --cov=harness --cov-report=term-missing
 
 ### 测试结果
 
-- ✅ 272 个测试全部通过
-- ✅ 测试覆盖率：86%（超过 80% 要求）
+- ✅ 471 个测试全部通过
+- ✅ 核心模块覆盖率：config.py 89%, executor.py 84%, models.py 83%, git.py 92%
+- ✅ dependency_graph.py 覆盖率：97%
 - ✅ reviewer.py 覆盖率：100%
+- ✅ 涵盖：单元测试、集成测试、CLI 测试、AI 集成测试
 
 ## 技术栈
 
@@ -603,6 +699,26 @@ mode = select_execution_mode(tasks)
 # 使用拓扑排序处理任务依赖
 # 无依赖的任务在同一批次并行执行
 batches = engine.prepare_batches(tasks)
+```
+
+### 依赖可视化
+
+```bash
+# 生成 Mermaid 依赖图
+harness plan graph
+
+# 文本分析报告（含关键路径和循环检测）
+harness plan graph --output report
+```
+
+### 多 AI 模型路由
+
+```python
+# Worker → Haiku（轻量、低成本）
+# Reviewer → Opus（最强推理）
+# Planner → Opus（复杂规划）
+# 未配置的角色自动回退到全局默认模型
+model = get_model_for_role(settings, "worker")
 ```
 
 ### Verdict 判定
@@ -706,6 +822,7 @@ MIT License
 - [完整学习计划](../docs/learning-plan.md)
 - [快速开始指南](../docs/quick-start.md)
 - [API 参考文档](../docs/api-reference.md)
+- [任务状态跟踪](../docs/TASK-STATUS.md)
 - [Phase 1 完成报告](../docs/phase1-completion.md)
 - [Phase 2 完成报告](../docs/phase2-completion.md)
 - [Phase 3 完成报告](../docs/phase3-completion.md)
@@ -715,6 +832,6 @@ MIT License
 
 ---
 
-**版本**: 0.6.0
-**状态**: 全部完成 ✅
-**测试**: 272 个测试，86% 覆盖率
+**版本**: 0.7.0
+**状态**: Phase 1-7 全部完成 ✅
+**测试**: 471 个测试
