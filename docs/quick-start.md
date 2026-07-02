@@ -1,417 +1,73 @@
-# Harness MVP 快速开始指南
+# Quick Start
 
-5 分钟快速上手 Harness MVP，体验完整的 Plan→Work→Review 循环。
+[简体中文](./quick-start.zh-CN.md)
 
-## 安装
+This quick start helps you explore the repository and run the MVP with the least possible setup.
 
-### 前置要求
+## 1. Explore the Repository
 
-- Python 3.11+
-- pip
+If you want to understand the ideas first, start with the research layer:
 
-### 安装步骤
+- [../research/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/research/README.md)
+- [../research/core-concepts.md](/E:/IDEWorkplaces/VS/harness-engineering-study/research/core-concepts.md)
+- [../research/comparison.md](/E:/IDEWorkplaces/VS/harness-engineering-study/research/comparison.md)
+
+If you want to understand the implementation shape:
+
+- [../design/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/design/README.md)
+- [../design/mvp-architecture.md](/E:/IDEWorkplaces/VS/harness-engineering-study/design/mvp-architecture.md)
+
+## 2. Install the MVP
 
 ```bash
-# 1. 进入项目目录
 cd harness-mvp
-
-# 2. 安装（开发模式）
-pip install -e ".[dev]"
-
-# 3. 验证安装
-harness --version
-```
-
-## 第一个任务
-
-### 1. 创建计划
-
-```bash
-# 添加第一个任务
-harness plan add \
-  --title "实现 Hello World" \
-  --description "创建一个简单的 Python 函数" \
-  --priority REQUIRED \
-  --estimate 1
-
-# 查看任务列表
-harness plan list
-```
-
-输出示例：
-```
-=== 任务列表 ===
-
-[ ] 1. 实现 Hello World 🔴
-    创建一个简单的 Python 函数
-```
-
-### 2. 执行任务
-
-```bash
-# Solo 模式执行
-harness work solo 1
-```
-
-输出示例：
-```
-=== 执行任务 #1: 实现 Hello World (Solo 模式) ===
-
-✅ 任务执行成功
-
-执行输出:
-开始执行任务：实现 Hello World
-任务描述：创建一个简单的 Python 函数
-```
-
-### 3. 审查代码
-
-创建一个测试文件：
-
-```python
-# hello.py
-def hello(name):
-    cursor.execute("SELECT * FROM users WHERE name = " + name)  # SQL 注入风险
-    API_KEY = "sk-1234567890"  # 硬编码密钥
-    return f"Hello, {name}!"
-```
-
-审查代码：
-
-```bash
-harness review code hello.py
-```
-
-输出示例：
-```
-=== 审查：hello.py ===
-判定：REQUEST_CHANGES
-
-发现 2 个问题:
-
-  🔴 [CRITICAL] SECURITY
-     发现 SQL 注入风险：使用字符串拼接构建 SQL 查询
-     hello.py:3
-     建议：使用参数化查询
-
-  🔴 [CRITICAL] SECURITY
-     发现硬编码的 API 密钥，不应将密钥写入代码
-     hello.py:4
-     建议：使用环境变量或密钥管理服务存储敏感信息
-
-=== 审查总结 ===
-需要修改：2 个严重，0 个主要问题
-```
-
-### 4. 查看统计
-
-```bash
-harness plan stats
-```
-
-输出示例：
-```
-=== 任务统计 ===
-
-总数：1
-待办 (TODO): 0
-进行中 (WIP): 0
-已完成 (DONE): 1
-被阻塞 (BLOCKED): 0
-
-进度：100%
-```
-
-## 完整工作流示例
-
-### 场景：实现用户认证功能
-
-```bash
-# 1. 添加多个任务
-harness plan add --title "设计数据库表" --priority REQUIRED --estimate 2
-harness plan add --title "实现注册接口" --priority REQUIRED --estimate 3
-harness plan add --title "实现登录接口" --priority REQUIRED --estimate 3
-harness plan add --title "添加单元测试" --priority RECOMMENDED --estimate 2
-
-# 2. 查看任务列表
-harness plan list
-
-# 3. 执行所有任务（自动选择 Parallel 模式，因为 >3 个任务）
-harness work all
-
-# 4. 审查所有 Python 文件
-harness review code --all
-
-# 5. 查看进度
-harness plan stats
-
-# 6. 同步到 Plans.md
-harness plan sync
-```
-
-## 常用命令速查
-
-### Plan 命令
-
-```bash
-# 列出任务
-harness plan list
-
-# 显示详情
-harness plan show 1
-
-# 添加任务（交互式）
-harness plan add
-
-# 添加任务（参数式）
-harness plan add --title "任务标题" --priority REQUIRED
-
-# 更新状态
-harness plan update 1 --status WIP
-harness plan update 1 --status DONE
-harness plan update 1 --status BLOCKED --reason "等待 API"
-
-# 统计信息
-harness plan stats
-
-# 同步到 Plans.md
-harness plan sync
-```
-
-### Work 命令
-
-```bash
-# Solo 模式（单个任务）
-harness work solo 1
-
-# Parallel 模式（所有 TODO 任务）
-harness work parallel
-
-# 执行所有任务（自动选择模式）
-harness work all
-
-# 执行指定范围
-harness work all 1-5
-
-# 查看执行状态
-harness work status
-```
-
-### Config 命令
-
-```bash
-# 显示当前配置
-harness config show
-
-# 更新 AI 模型
-harness config set ai_model claude-opus-4-20250514
-
-# 更新执行模式
-harness config set execution_mode PARALLEL
-
-# 重置为默认配置
-harness config init
-```
-
-### Review 命令
-
-```bash
-# 审查单个文件
-harness review code src/auth.py
-
-# 审查多个文件
-harness review code src/auth.py src/user.py
-
-# 审查所有 Python 文件
-harness review code --all
-
-# 增量审查（只审查变更文件）✨ 新功能
-harness review incremental                  # 默认比较 HEAD~1
-harness review incremental --base main      # 比较 main 分支
-harness review incremental --base abc1234   # 比较特定提交
-
-# 审查计划
-harness review plan
-
-# 查看最近审查
-harness review last
-```
-
-## 核心概念
-
-### 任务状态
-
-- **TODO** - 待办
-- **WIP** - 进行中
-- **DONE** - 已完成
-- **BLOCKED** - 被阻塞
-
-### 优先级
-
-- **REQUIRED** - 必需（🔴）
-- **RECOMMENDED** - 推荐（🟡）
-- **OPTIONAL** - 可选（🟢）
-
-### 执行模式
-
-- **Solo** - 1-2 个任务，最小开销
-- **Parallel** - 3+ 个任务，Worker 分离
-
-### Verdict 判定
-
-- **APPROVE** - 批准（Minor/Info 问题）
-- **REQUEST_CHANGES** - 需要修改（Critical ≥ 1 或 Major ≥ 2）
-
-### 问题严重程度
-
-- **CRITICAL** - 严重（必须修复）
-- **MAJOR** - 主要（应该修复）
-- **MINOR** - 次要（建议修复）
-- **INFO** - 提示（可选修复）
-
-### 审查类别
-
-- **SECURITY** - 安全（SQL 注入、XSS、硬编码密钥）
-- **PERFORMANCE** - 性能（N+1 查询、低效算法）
-- **QUALITY** - 质量（过长函数、缺失文档）
-- **ACCESSIBILITY** - 可访问性（缺少 alt/role/label）
-- **AI_RESIDUALS** - AI 残留（TODO、mock 数据、localhost）
-
-## 增量审查示例（v0.7.0 新增）
-
-在实际开发中，增量审查可以显著提高效率：
-
-### 场景1：提交前检查
-
-```bash
-# 1. 修改了一些文件
-git status
-# modified: src/auth.py
-# modified: src/user.py
-# new file: tests/test_auth.py
-
-# 2. 增量审查变更
-harness review incremental
-
-# 3. 根据审查结果修复问题
-# ...
-
-# 4. 再次审查确认通过
-harness review incremental
-```
-
-### 场景2：Pull Request 审查
-
-```bash
-# 1. 切换到 feature 分支
-git checkout feature/user-auth
-
-# 2. 审查相比 main 分支的所有变更
-harness review incremental --base main
-
-# 3. 查看汇总报告
-=== 增量代码审查 ===
-基准: main
-检测到 5 个变更文件
-...
-判定: APPROVE（可以合并）
-```
-
-### 场景3：版本对比
-
-```bash
-# 审查从 v1.0.0 到现在的所有变更
-harness review incremental --base v1.0.0
-
-# 审查最近两次提交的变更
-harness review incremental --base HEAD~2
-```
-
-## 数据存储
-
-所有数据存储在 `.harness/` 目录：
-
-```
-.harness/
-├── state.json       # 当前状态
-├── tasks.json       # 任务数据
-└── history/         # 历史记录
-    └── events.json
-```
-
-## Plans.md 格式
-
-```markdown
-# 计划
-
-## Tasks
-
-### Required（必需）
-
-- [ ] **Task 1**: 实现登录功能
-  支持邮箱和密码验证
-  - ✅ 返回 200
-  - ✅ 返回 JWT token
-  - 估算：3
-  - 依赖：无
-
-### Recommended（推荐）
-
-- [~] **Task 2**: 添加单元测试
-  - 估算：2
-
-### Optional（可选）
-
-- [x] **Task 3**: 优化性能 ✅
-```
-
-## 故障排除
-
-### 问题：命令未找到
-
-```bash
-# 确认安装
-pip list | grep harness
-
-# 重新安装
 pip install -e ".[dev]"
 ```
 
-### 问题：.harness 目录不存在
+Check that the CLI is available:
 
 ```bash
-# 自动创建（首次运行任何命令时）
-harness plan list
-```
-
-### 问题：测试失败
-
-```bash
-# 运行测试
-pytest tests/ -v
-
-# 查看覆盖率
-pytest tests/ --cov=harness
-```
-
-## 下一步
-
-- 查看 [完整 README](../harness-mvp/README.md)
-- 查看 [API 文档](./api-reference.md)
-- 查看 [示例项目](../examples/)
-- 查看 [架构设计](../design/mvp-architecture.md)
-
-## 获取帮助
-
-```bash
-# 查看命令帮助
 harness --help
-harness plan --help
-harness work --help
-harness config --help
-harness review --help
 ```
 
----
+## 3. Try a Minimal Workflow
 
-**提示**：所有命令都支持 `--help` 选项查看详细说明。
+Create a task:
+
+```bash
+harness plan add --title "Implement login" --priority REQUIRED
+```
+
+Execute it:
+
+```bash
+harness work solo 1
+```
+
+Review code:
+
+```bash
+harness review code src/auth.py
+```
+
+## 4. Useful Commands
+
+```bash
+harness plan list
+harness plan stats
+harness work status
+harness review incremental
+```
+
+## 5. Where to Go Next
+
+- Learn the research context:
+  - [../research/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/research/README.md)
+- Understand the MVP design:
+  - [../design/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/design/README.md)
+- Check the API surface:
+  - [./api-reference.md](/E:/IDEWorkplaces/VS/harness-engineering-study/docs/api-reference.md)
+- Check the public-facing roadmap:
+  - [./roadmap.md](/E:/IDEWorkplaces/VS/harness-engineering-study/docs/roadmap.md)
+- Explore the MVP implementation:
+  - [../harness-mvp/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/harness-mvp/README.md)
