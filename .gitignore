@@ -40,6 +40,7 @@ htmlcov/
 
 # Local settings
 .claude/settings.local.json
+AGENTS.md
 
 # OS
 .DS_Store
