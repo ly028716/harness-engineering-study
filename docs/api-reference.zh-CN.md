@@ -1829,7 +1829,7 @@ template = store.get_template("mytemplate")
 
 if template:
     print(f"✅ 模板加载成功: {template.name}")
-    
+
     # 验证模板
     errors = template.validate()
     if errors:
@@ -1838,11 +1838,11 @@ if template:
             print(f"  - {error}")
     else:
         print("✅ 验证通过")
-        
+
     # 检查变量
     variables = template.get_variables()
     print(f"📋 模板变量: {variables}")
-    
+
     prompt_keys = {p.key for p in template.prompts}
     print(f"📋 Prompt 键: {prompt_keys}")
 else:
