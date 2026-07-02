@@ -41,6 +41,7 @@ htmlcov/
 # Local settings
 .claude/settings.local.json
 AGENTS.md
+.worktrees/
 
 # OS
 .DS_Store
