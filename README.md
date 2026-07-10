@@ -132,6 +132,15 @@ Implementation entry points:
 
 The deeper research and architecture documents are currently written primarily in Chinese. That is intentional: this repo aims to be a strong Chinese-language learning and practice resource, while keeping an English-friendly entry layer for GitHub discovery.
 
+### 4. Example Matrix
+
+The repository now includes example scenarios that feel closer to real engineering work than a generic agent demo:
+
+- [examples/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/examples/README.md)
+- [examples/todo-app/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/examples/todo-app/README.md)
+- [examples/auth-flow/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/examples/auth-flow/README.md)
+- [examples/api-refactor/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/examples/api-refactor/README.md)
+
 ## Quick Start
 
 ### Read the research
