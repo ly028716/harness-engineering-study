@@ -7,7 +7,6 @@ An open repository for studying, documenting, and prototyping **Harness Engineer
 ![Harness Engineering Study README hero](./docs/assets/readme-hero.svg)
 
 ![GitHub stars](https://img.shields.io/github/stars/ly028716/harness-engineering-study?style=flat-square)
-![GitHub last commit](https://img.shields.io/github/last-commit/ly028716/harness-engineering-study?style=flat-square)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square)
 ![Status](https://img.shields.io/badge/status-active%20study%20%2B%20mvp-success?style=flat-square)
 
@@ -22,7 +21,7 @@ An open repository for studying, documenting, and prototyping **Harness Engineer
 
 If this repository is useful to your work, starring it is the simplest way to bookmark future improvements and help more developers discover it.
 
-[![Star History Chart](https://api.star-history.com/svg?repos=ly028716/harness-engineering-study&type=Date)](https://star-history.com/#ly028716/harness-engineering-study&Date)
+[View star history on Star History](https://star-history.com/#ly028716/harness-engineering-study&Date)
 
 ## Why Star This Repo
 
