@@ -21,6 +21,11 @@ If you are new to the repository, these are the most useful docs to open first:
 
 - [local-preview.html](/E:/IDEWorkplaces/VS/harness-engineering-study/docs/local-preview.html)
 
+## GitHub Surface
+
+- [github-metadata-kit.md](/E:/IDEWorkplaces/VS/harness-engineering-study/docs/github-metadata-kit.md)
+- [github-metadata-kit.zh-CN.md](/E:/IDEWorkplaces/VS/harness-engineering-study/docs/github-metadata-kit.zh-CN.md)
+
 ## Outreach / Launch
 
 - [launch-kit.md](/E:/IDEWorkplaces/VS/harness-engineering-study/docs/launch-kit.md)
