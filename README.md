@@ -12,6 +12,49 @@ This repository is designed to be useful in three different ways at once:
 - **Runnable**: it includes a practical `Plan -> Work -> Review` MVP you can inspect and run locally
 - **Different**: it uses an English-friendly discovery layer for GitHub visitors while keeping deeper Chinese content as its long-term learning moat
 
+## Workflow Snapshot
+
+The fastest way to understand this repository is to read it as one visible engineering loop:
+
+### 1. Task Input
+
+- start from a concrete task such as `Implement login flow`
+- keep explicit acceptance criteria instead of vague agent goals
+- make priority and effort readable before execution starts
+
+### 2. Workflow Spine
+
+- `Plan`: structure tasks and dependencies
+- `Work`: execute in solo or parallel mode
+- `Review`: return a verdict, not vague feedback
+
+### 3. Execution Result
+
+- mode stays visible: `Solo` or `Parallel`
+- task status ends in something auditable like `DONE`
+- review output stays structured enough to inspect and discuss
+
+That is the core reason this project exists: to make Harness Engineering easier to study, compare, and try.
+
+## CLI Evidence
+
+The MVP is meant to feel inspectable, not magical:
+
+```bash
+harness plan add --title "Implement login flow" --priority REQUIRED
+harness work solo 1
+harness review code src/auth.py
+```
+
+This is the smallest useful story the repository wants to tell on first contact: task in, workflow visible, verdict out.
+
+## Trust Signals
+
+- Research is grounded in OpenAI, Anthropic, `claude-code-harness`, `refact`, and `agent-os`
+- The repository includes a runnable Python MVP rather than theory-only notes
+- Local verification on the MVP currently passes with `514` tests
+- The repo uses an English discovery layer with deeper Chinese learning material underneath
+
 ## Why This Repo
 
 Most discussions around Harness Engineering are scattered across essays, experiments, and framework-specific examples. This project brings them together in one place:
@@ -20,16 +63,6 @@ Most discussions around Harness Engineering are scattered across essays, experim
 - A practical `Plan -> Work -> Review` MVP you can run locally
 - Chinese deep-dive documentation for developers who want more than marketing-level summaries
 - A lightweight implementation that favors readability over infrastructure complexity
-
-## In 60 Seconds
-
-If you only spend one minute on this repository, the intended story is:
-
-1. Start from a concrete engineering task, not a vague "agent" demo
-2. See how the task flows through `plan`, `work`, and `review`
-3. End with a reviewable engineering artifact rather than a black-box claim
-
-That is the core reason this project exists: to make Harness Engineering easier to study, compare, and try.
 
 ## What You Can Explore
 
