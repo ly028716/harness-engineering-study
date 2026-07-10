@@ -20,10 +20,20 @@ Each example is meant to answer one practical question:
 | `auth-flow` | Authentication feature work | Acceptance criteria, safety-sensitive behavior, and review expectations | [auth-flow/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/examples/auth-flow/README.md) |
 | `api-refactor` | Existing API cleanup | Refactoring boundaries, contract preservation, and structured review output | [api-refactor/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/examples/api-refactor/README.md) |
 
+## Featured Example
+
+If you only open one example, start with [auth-flow/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/examples/auth-flow/README.md).
+
+It is the best balance between realism and readability:
+
+- more credible than a toy CRUD slice
+- easier to understand on first read than a refactor-focused example
+- strong enough to show why `Plan -> Work -> Review` is useful as an engineering loop
+
 ## Which Example To Read First
 
+- Start with `auth-flow` if you want the strongest public showcase for the repository.
 - Start with `todo-app` if you want the simplest end-to-end introduction.
-- Read `auth-flow` if you want a more realistic feature example with explicit acceptance criteria.
 - Read `api-refactor` if you care more about engineering maintenance work than greenfield implementation.
 
 ## What A Good Example Should Show

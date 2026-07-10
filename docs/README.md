@@ -21,6 +21,11 @@ If you are new to the repository, these are the most useful docs to open first:
 
 - [local-preview.html](/E:/IDEWorkplaces/VS/harness-engineering-study/docs/local-preview.html)
 
+## Outreach / Launch
+
+- [launch-kit.md](/E:/IDEWorkplaces/VS/harness-engineering-study/docs/launch-kit.md)
+- [launch-kit.zh-CN.md](/E:/IDEWorkplaces/VS/harness-engineering-study/docs/launch-kit.zh-CN.md)
+
 ## Archive
 
 Older phase reports, enhancement logs, task tracking snapshots, and process-oriented materials now live under:

@@ -6,6 +6,24 @@ An open repository for studying, documenting, and prototyping **Harness Engineer
 
 ![Harness Engineering Study README hero](./docs/assets/readme-hero.svg)
 
+![GitHub stars](https://img.shields.io/github/stars/ly028716/harness-engineering-study?style=flat-square)
+![GitHub last commit](https://img.shields.io/github/last-commit/ly028716/harness-engineering-study?style=flat-square)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square)
+![Status](https://img.shields.io/badge/status-active%20study%20%2B%20mvp-success?style=flat-square)
+
+## Project Snapshot
+
+- **What it is**: a research-driven repository plus a runnable Python MVP for `Plan -> Work -> Review`
+- **Why it matters**: most Harness Engineering discussions stay fragmented across essays, repos, and experiments
+- **What makes it different**: English-friendly GitHub entry, deeper Chinese implementation and learning material
+- **What you can trust**: real repository structure, executable CLI flow, and continuously improved study notes
+
+## Social Proof
+
+If this repository is useful to your work, starring it is the simplest way to bookmark future improvements and help more developers discover it.
+
+[![Star History Chart](https://api.star-history.com/svg?repos=ly028716/harness-engineering-study&type=Date)](https://star-history.com/#ly028716/harness-engineering-study&Date)
+
 ## Why Star This Repo
 
 This repository is designed to be useful in three different ways at once:
@@ -54,8 +72,9 @@ This is the smallest useful story the repository wants to tell on first contact:
 
 - Research is grounded in OpenAI, Anthropic, `claude-code-harness`, `refact`, and `agent-os`
 - The repository includes a runnable Python MVP rather than theory-only notes
-- Local verification on the MVP currently passes with `514` tests
+- The MVP exposes a visible CLI workflow instead of a black-box agent story
 - The repo uses an English discovery layer with deeper Chinese learning material underneath
+- Documentation, examples, and repo surface are being iterated as a public learning artifact
 
 ## Quick Demo
 
@@ -137,8 +156,8 @@ The deeper research and architecture documents are currently written primarily i
 The repository now includes example scenarios that feel closer to real engineering work than a generic agent demo:
 
 - [examples/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/examples/README.md)
+- Featured showcase: [examples/auth-flow/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/examples/auth-flow/README.md)
 - [examples/todo-app/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/examples/todo-app/README.md)
-- [examples/auth-flow/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/examples/auth-flow/README.md)
 - [examples/api-refactor/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/examples/api-refactor/README.md)
 
 ## Quick Start
@@ -255,7 +274,13 @@ The project already contains:
 - examples
 - tests and iterative project notes
 
-The next stage is to make the repository easier to discover, understand, and reuse.
+Current focus:
+
+- stronger GitHub-facing trust and discovery signals
+- clearer example-driven onboarding
+- better reuse paths for readers who want to adapt the MVP
+
+This is an actively refined study repository, not a frozen demo dump.
 
 ## License
 
