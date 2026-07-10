@@ -234,6 +234,7 @@ This repository is a strong fit if you are trying to do any of the following:
 
 - English entry:
   - [README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/README.md)
+  - [docs/README.md](/E:/IDEWorkplaces/VS/harness-engineering-study/docs/README.md)
   - [docs/quick-start.md](/E:/IDEWorkplaces/VS/harness-engineering-study/docs/quick-start.md)
   - [docs/api-reference.md](/E:/IDEWorkplaces/VS/harness-engineering-study/docs/api-reference.md)
   - [docs/roadmap.md](/E:/IDEWorkplaces/VS/harness-engineering-study/docs/roadmap.md)

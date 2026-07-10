@@ -914,12 +914,12 @@ MIT License
 - [完整学习计划](../docs/learning-plan.md)
 - [快速开始指南](../docs/quick-start.zh-CN.md)
 - [API 参考文档](../docs/api-reference.zh-CN.md)
-- [任务状态跟踪](../docs/TASK-STATUS.md)
-- [Phase 1 完成报告](../docs/phase1-completion.md)
-- [Phase 2 完成报告](../docs/phase2-completion.md)
-- [Phase 3 完成报告](../docs/phase3-completion.md)
-- [Phase 4 完成报告](../docs/phase4-completion.md)
-- [Phase 5 完成报告](../docs/phase5-completion.md)
+- [任务状态跟踪](../docs/archive/TASK-STATUS.md)
+- [Phase 1 完成报告](../docs/archive/phase1-completion.md)
+- [Phase 2 完成报告](../docs/archive/phase2-completion.md)
+- [Phase 3 完成报告](../docs/archive/phase3-completion.md)
+- [Phase 4 完成报告](../docs/archive/phase4-completion.md)
+- [Phase 5 完成报告](../docs/archive/phase5-completion.md)
 - [MVP 架构设计](../design/mvp-architecture.md)
 
 ---

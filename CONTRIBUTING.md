@@ -778,7 +778,8 @@ def execute_task(
 - `docs/quick-start.md` - 快速入门
 - `docs/api-reference.md` - API 参考
 - `docs/learning-plan.md` - 学习计划
-- 阶段完成文档（phase*-completion.md）
+- `docs/README.md` - 文档入口
+- 阶段完成文档（`docs/archive/phase*-completion.md`）
 
 **3. 示例代码**
 
