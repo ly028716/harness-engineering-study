@@ -4,6 +4,8 @@
 
 An open repository for studying, documenting, and prototyping **Harness Engineering** workflows, with a runnable lightweight **Agent Harness MVP** built in Python.
 
+![Harness Engineering Study README hero](./docs/assets/readme-hero.svg)
+
 ## Why Star This Repo
 
 This repository is designed to be useful in three different ways at once:
@@ -54,6 +56,38 @@ This is the smallest useful story the repository wants to tell on first contact:
 - The repository includes a runnable Python MVP rather than theory-only notes
 - Local verification on the MVP currently passes with `514` tests
 - The repo uses an English discovery layer with deeper Chinese learning material underneath
+
+## Quick Demo
+
+If you want to validate the repository in under one minute, this is the shortest useful path:
+
+### 1. Install the MVP locally
+
+```bash
+cd harness-mvp
+pip install -e ".[dev]"
+```
+
+### 2. Create and execute one concrete task
+
+```bash
+harness plan add --title "Implement login flow" --priority REQUIRED
+harness work solo 1
+```
+
+### 3. End with a visible review result
+
+```bash
+harness review code src/auth.py
+```
+
+What you should expect from this flow:
+
+- a concrete task enters the system
+- the harness loop becomes visible instead of staying abstract
+- the run ends in a reviewable verdict rather than a black-box claim
+
+For a more guided walkthrough, see [docs/quick-start.md](/E:/IDEWorkplaces/VS/harness-engineering-study/docs/quick-start.md).
 
 ## Why This Repo
 
@@ -127,8 +161,6 @@ harness plan add --title "Implement login" --priority REQUIRED
 harness work solo 1
 harness review code src/auth.py
 ```
-
-For a more guided walkthrough, see [docs/quick-start.md](/E:/IDEWorkplaces/VS/harness-engineering-study/docs/quick-start.md).
 
 ## How This Repo Differs
 

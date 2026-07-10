@@ -1,0 +1,95 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="80" x2="1160" y2="660" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FBF6EE"/>
+      <stop offset="1" stop-color="#F4ECDF"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#FFFAF2"/>
+      <stop offset="1" stop-color="#FFFDF9"/>
+    </linearGradient>
+    <linearGradient id="terminal" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#201C19"/>
+      <stop offset="1" stop-color="#171412"/>
+    </linearGradient>
+    <filter id="shadow" x="-40" y="-40" width="1360" height="800" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="25" flood-color="#493421" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="720" rx="32" fill="url(#bg)"/>
+  <circle cx="170" cy="90" r="160" fill="#B8562F" fill-opacity="0.10"/>
+  <circle cx="1080" cy="110" r="140" fill="#2F6C54" fill-opacity="0.09"/>
+
+  <g filter="url(#shadow)">
+    <rect x="56" y="48" width="1168" height="624" rx="32" fill="#FFFBF5" fill-opacity="0.82" stroke="#D8C3AD"/>
+  </g>
+
+  <rect x="88" y="80" width="276" height="38" rx="19" fill="#EFD5C8"/>
+  <circle cx="108" cy="99" r="5" fill="#B8562F"/>
+  <text x="126" y="104" fill="#7A3218" font-family="Georgia, 'Times New Roman', serif" font-size="17" letter-spacing="1.2">README HERO PREVIEW</text>
+
+  <text x="88" y="176" fill="#1F2B33" font-family="Georgia, 'Times New Roman', serif" font-size="56" font-weight="700">
+    <tspan x="88" dy="0">A lightweight Agent Harness</tspan>
+    <tspan x="88" dy="66">for structured engineering workflows</tspan>
+  </text>
+
+  <text x="88" y="286" fill="#59656F" font-family="Georgia, 'Times New Roman', serif" font-size="24">
+    <tspan x="88" dy="0">From task input to verdict output through a readable</tspan>
+    <tspan x="88" dy="34">Plan - Work - Review loop.</tspan>
+  </text>
+
+  <rect x="88" y="332" width="230" height="54" rx="27" fill="#B8562F"/>
+  <text x="145" y="366" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="21" font-weight="700">Open MVP Docs</text>
+
+  <rect x="334" y="332" width="230" height="54" rx="27" fill="#FFF8F0" stroke="#D8C3AD"/>
+  <text x="390" y="366" fill="#1F2B33" font-family="Arial, sans-serif" font-size="21" font-weight="700">Read the Research</text>
+
+  <rect x="88" y="424" width="266" height="164" rx="24" fill="url(#card)" stroke="#D8C3AD"/>
+  <rect x="112" y="448" width="112" height="28" rx="14" fill="#DBE9E2"/>
+  <text x="135" y="467" fill="#2F6C54" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1">TASK INPUT</text>
+  <text x="112" y="510" fill="#1F2B33" font-family="Georgia, 'Times New Roman', serif" font-size="30" font-weight="700">Implement login flow</text>
+  <text x="112" y="544" fill="#59656F" font-family="Arial, sans-serif" font-size="18">Priority: REQUIRED</text>
+  <text x="112" y="572" fill="#59656F" font-family="Arial, sans-serif" font-size="18">Effort: 3</text>
+  <text x="112" y="606" fill="#59656F" font-family="Arial, sans-serif" font-size="17">- Return 200 for valid credentials</text>
+  <text x="112" y="632" fill="#59656F" font-family="Arial, sans-serif" font-size="17">- Issue a signed session token</text>
+
+  <rect x="386" y="424" width="510" height="164" rx="24" fill="url(#card)" stroke="#D8C3AD"/>
+  <rect x="410" y="448" width="136" height="28" rx="14" fill="#DBE9E2"/>
+  <text x="430" y="467" fill="#2F6C54" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1">WORKFLOW SPINE</text>
+
+  <rect x="418" y="496" width="134" height="72" rx="18" fill="#FFFFFF" fill-opacity="0.75" stroke="#D8C3AD"/>
+  <rect x="434" y="512" width="58" height="22" rx="11" fill="#EFD5C8"/>
+  <text x="447" y="527" fill="#7A3218" font-family="Arial, sans-serif" font-size="12" font-weight="700">PLAN</text>
+  <text x="434" y="551" fill="#1F2B33" font-family="Arial, sans-serif" font-size="17" font-weight="700">Structure tasks</text>
+
+  <text x="572" y="540" fill="#B8562F" font-family="Arial, sans-serif" font-size="34" font-weight="700">-&gt;</text>
+
+  <rect x="618" y="496" width="134" height="72" rx="18" fill="#FFFFFF" fill-opacity="0.75" stroke="#D8C3AD"/>
+  <rect x="634" y="512" width="58" height="22" rx="11" fill="#EFD5C8"/>
+  <text x="647" y="527" fill="#7A3218" font-family="Arial, sans-serif" font-size="12" font-weight="700">WORK</text>
+  <text x="634" y="551" fill="#1F2B33" font-family="Arial, sans-serif" font-size="17" font-weight="700">Execute clearly</text>
+
+  <text x="772" y="540" fill="#B8562F" font-family="Arial, sans-serif" font-size="34" font-weight="700">-&gt;</text>
+
+  <rect x="818" y="496" width="134" height="72" rx="18" fill="#FFFFFF" fill-opacity="0.75" stroke="#D8C3AD"/>
+  <rect x="834" y="512" width="68" height="22" rx="11" fill="#EFD5C8"/>
+  <text x="845" y="527" fill="#7A3218" font-family="Arial, sans-serif" font-size="12" font-weight="700">REVIEW</text>
+  <text x="834" y="551" fill="#1F2B33" font-family="Arial, sans-serif" font-size="17" font-weight="700">Return verdicts</text>
+
+  <rect x="928" y="424" width="248" height="164" rx="24" fill="url(#card)" stroke="#D8C3AD"/>
+  <rect x="952" y="448" width="154" height="28" rx="14" fill="#DBE9E2"/>
+  <text x="970" y="467" fill="#2F6C54" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1">EXECUTION RESULT</text>
+  <text x="952" y="514" fill="#59656F" font-family="Arial, sans-serif" font-size="16">Mode</text>
+  <text x="952" y="540" fill="#1F2B33" font-family="Georgia, 'Times New Roman', serif" font-size="28" font-weight="700">Solo</text>
+  <text x="952" y="575" fill="#59656F" font-family="Arial, sans-serif" font-size="16">Task Status</text>
+  <text x="952" y="601" fill="#1F2B33" font-family="Georgia, 'Times New Roman', serif" font-size="28" font-weight="700">DONE</text>
+  <text x="952" y="636" fill="#59656F" font-family="Arial, sans-serif" font-size="16">Verdict</text>
+  <text x="952" y="662" fill="#2F6C54" font-family="Georgia, 'Times New Roman', serif" font-size="28" font-weight="700">APPROVE</text>
+
+  <rect x="88" y="612" width="1088" height="38" rx="19" fill="url(#terminal)"/>
+  <text x="110" y="637" fill="#F1D4C4" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="1">CLI EVIDENCE</text>
+  <text x="240" y="637" fill="#F3EDE5" font-family="Consolas, 'Courier New', monospace" font-size="14">harness plan add --title "Implement login flow" --priority REQUIRED</text>
+  <text x="754" y="637" fill="#F3EDE5" font-family="Consolas, 'Courier New', monospace" font-size="14">harness work solo 1</text>
+  <text x="936" y="637" fill="#F3EDE5" font-family="Consolas, 'Courier New', monospace" font-size="14">harness review code src/auth.py</text>
+</svg>
