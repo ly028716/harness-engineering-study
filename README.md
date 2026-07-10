@@ -197,12 +197,29 @@ Near-term focus:
 - better quick-start experience
 - stronger demo and showcase materials
 
-## Who This Is For
+## Use Cases / Who Should Care
 
-- Developers curious about Harness Engineering beyond buzzwords
-- Builders who want a small, readable harness prototype
-- Technical leads exploring structured AI-assisted development workflows
-- Chinese-speaking learners who want systematic research material
+This repository is a strong fit if you are trying to do any of the following:
+
+### 1. Compare real harness-style approaches
+
+- you want one place to study OpenAI, Anthropic, `claude-code-harness`, `refact`, and `agent-os`
+- you care more about workflow structure and trade-offs than hype-level summaries
+
+### 2. Inspect a small runnable reference
+
+- you want a harness prototype that is small enough to read, but real enough to run
+- you prefer a readable Python MVP over a large platform or framework-heavy stack
+
+### 3. Explore structured AI-assisted engineering workflows
+
+- you are evaluating how `Plan -> Work -> Review` can work as an engineering loop
+- you want outputs that stay reviewable instead of disappearing into black-box automation
+
+### 4. Go deeper after the English entry layer
+
+- you want the English README to help you decide quickly whether the repo is relevant
+- you also want deeper Chinese research and implementation notes once you commit to reading further
 
 ## Documentation Map
 
