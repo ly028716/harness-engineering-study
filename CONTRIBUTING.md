@@ -63,7 +63,7 @@
 发现 Bug？请帮助我们改进！
 
 **提交 Bug 报告前：**
-- 🔍 检查 [Issues](https://github.com/yourusername/harness-engineering-study/issues) 确保问题尚未被报告
+- 🔍 检查 [Issues](https://github.com/ly028716/harness-engineering-study/issues) 确保问题尚未被报告
 - 📖 查看 [文档](docs/) 确认这不是预期行为
 - 🧪 在最新版本上重现问题
 
@@ -95,7 +95,7 @@
 **环境信息**
 - OS: [例如 Windows 11]
 - Python 版本: [例如 3.12.0]
-- 项目版本: [例如 0.6.0]
+- 项目版本: [例如 0.7.0]
 
 **附加信息**
 添加任何其他有助于解决问题的信息。
@@ -177,9 +177,9 @@
 
 ### 2. 克隆仓库
 
+在自己的 Fork 页面点击 "Code"，复制并运行 GitHub 生成的 clone 命令。
+
 ```bash
-# 克隆你 fork 的仓库
-git clone https://github.com/YOUR_USERNAME/harness-engineering-study.git
 cd harness-engineering-study
 ```
 
@@ -187,7 +187,7 @@ cd harness-engineering-study
 
 ```bash
 # 添加原始仓库为上游
-git remote add upstream https://github.com/ORIGINAL_OWNER/harness-engineering-study.git
+git remote add upstream https://github.com/ly028716/harness-engineering-study.git
 
 # 验证远程仓库
 git remote -v
@@ -966,9 +966,11 @@ with open(path, 'r') as f:
 - ✨ 功能请求
 - 📝 文档问题
 
-**邮件**
-- 📧 私密问题或合作建议
-- 联系维护者
+**GitHub Profile**
+- 👤 [项目维护者](https://github.com/ly028716)
+
+**Security Advisory**
+- 🔒 [私密报告安全漏洞](https://github.com/ly028716/harness-engineering-study/security/advisories/new)
 
 ### 提问指南
 
@@ -995,7 +997,7 @@ with open(path, 'r') as f:
 **环境信息：**
 - OS: Windows 11
 - Python: 3.12.0
-- 版本: 0.6.0
+- 版本: 0.7.0
 
 **代码示例：**
 ```python
@@ -1064,10 +1066,10 @@ with open(path, 'r') as f:
 
 如果你有任何问题或建议，可以通过以下方式联系我们：
 
-- 📧 **邮箱**: your-email@example.com
-- 💬 **GitHub**: [@yourusername](https://github.com/yourusername)
-- 🐛 **Issues**: [提交 Issue](https://github.com/yourusername/harness-engineering-study/issues)
-- 💭 **Discussions**: [参与讨论](https://github.com/yourusername/harness-engineering-study/discussions)
+- 👤 **GitHub Profile**: [@ly028716](https://github.com/ly028716)
+- 🐛 **Issues**: [提交 Issue](https://github.com/ly028716/harness-engineering-study/issues)
+- 💭 **Discussions**: [参与讨论](https://github.com/ly028716/harness-engineering-study/discussions)
+- 🔒 **Security Advisory**: [私密报告安全漏洞](https://github.com/ly028716/harness-engineering-study/security/advisories/new)
 
 ---
 

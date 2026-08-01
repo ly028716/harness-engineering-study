@@ -281,6 +281,10 @@ Current focus:
 
 This is an actively refined study repository, not a frozen demo dump.
 
+## Contributing
+
+Contributions are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, issue reporting, and pull request guidance.
+
 ## License
 
 MIT

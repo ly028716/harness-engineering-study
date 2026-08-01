@@ -1,0 +1,52 @@
+name: 缺陷报告
+description: 报告可复现的问题，帮助我们改进项目。
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你的反馈。请尽可能完整地填写以下信息，避免在此表单中提交敏感信息或安全漏洞。
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: 复现步骤
+      description: 请提供能够稳定复现该问题的最小步骤。
+      placeholder: |
+        1. 运行 ...
+        2. 执行 ...
+        3. 观察到 ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: 预期行为
+      description: 你期望发生什么？
+    validations:
+      required: true
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: 实际行为
+      description: 实际发生了什么？请附上完整错误信息。
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息
+      description: 请提供操作系统、Python 版本、项目版本及相关依赖版本。
+      placeholder: |
+        - 操作系统：
+        - Python：
+        - 项目版本或提交：
+        - 相关依赖：
+    validations:
+      required: true
+  - type: textarea
+    id: logs-or-screenshots
+    attributes:
+      label: 日志或截图
+      description: 请粘贴已脱敏的日志，或拖放截图/录屏。
