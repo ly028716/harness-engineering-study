@@ -155,6 +155,38 @@ class TestWorkerAgent:
         worker.update_status("completed")
         assert worker.status == "completed"
 
+    def test_worker_agent_exposes_execution_error_in_result(self):
+        """AI 调用失败时，执行结果保留可诊断的错误信息。"""
+        from harness.executor import WorkerAgent
+
+        class FailingAIClient:
+            model = "test-model"
+
+            def generate_code(self, *args, **kwargs):
+                raise RuntimeError("模拟 AI 故障")
+
+        worker = WorkerAgent(Task(id=1, title="失败任务"), FailingAIClient())
+
+        result = worker.execute()
+
+        assert result.success is False
+        assert result.error == "模拟 AI 故障"
+
+    def test_worker_agent_uses_exception_type_when_error_message_is_empty(self):
+        """无消息异常也必须产生可诊断的错误结果。"""
+        from harness.executor import WorkerAgent
+
+        class FailingAIClient:
+            model = "test-model"
+
+            def generate_code(self, *args, **kwargs):
+                raise RuntimeError()
+
+        result = WorkerAgent(Task(id=1, title="失败任务"), FailingAIClient()).execute()
+
+        assert result.success is False
+        assert result.error == "RuntimeError"
+
 
 class TestSoloExecutor:
     """测试 Solo 执行器"""
@@ -497,6 +529,35 @@ class TestTaskExecutionService:
 
             with pytest.raises(ValueError):
                 service.execute_task_solo(999)
+
+    def test_failed_solo_task_is_blocked_and_logged(self, tmp_path, monkeypatch):
+        """任务执行失败后标记为 BLOCKED，并记录可重试所需的原因。"""
+        from harness.executor import ExecutionResult, SoloExecutor, TaskExecutionService
+        from harness.store import TaskStore
+
+        harness_dir = tmp_path / ".harness"
+        store = TaskStore(harness_dir)
+        store.add_task(Task(id=1, title="失败任务"))
+
+        def fail_execute(self, task):
+            return ExecutionResult(
+                task_id=task.id,
+                task_title=task.title,
+                success=False,
+                error="模拟 AI 故障",
+            )
+
+        monkeypatch.setattr(SoloExecutor, "execute", fail_execute)
+
+        result = TaskExecutionService(harness_dir).execute_task_solo(1)
+
+        assert result.success is False
+        saved_task = store.get_task(1)
+        assert saved_task.status == TaskStatus.BLOCKED
+        assert saved_task.block_reason == "模拟 AI 故障"
+        assert TaskExecutionService(harness_dir).history.get_events_by_type(
+            "task_blocked"
+        )[0]["reason"] == "模拟 AI 故障"
 
 
 class TestParallelExecutorConcurrency:

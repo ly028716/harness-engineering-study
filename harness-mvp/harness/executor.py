@@ -12,7 +12,7 @@ from typing import List, Optional, Dict, Any, Tuple, Type
 from harness.models import Task, TaskStatus
 from harness.ai_client import AIClient
 from harness.prompts import WORKER_SYSTEM_PROMPT, build_work_prompt
-from harness.code_extractor import CodeBlockExtractor
+from harness.code_extractor import CodeBlockExtractor, resolve_output_path
 
 
 class ExecutionMode(Enum):
@@ -100,12 +100,14 @@ class WorkerAgent:
 
         success = False
         model_used = ""
+        error = ""
         try:
             self._execute_task(work_dir)
             success = True
             model_used = self.ai_client.model if self.ai_client else ""
         except Exception as e:
-            self.capture_output(f"执行错误：{str(e)}")
+            error = str(e) or e.__class__.__name__
+            self.capture_output(f"执行错误：{error}")
 
         self.completed_at = datetime.now()
         self.update_status("completed")
@@ -117,6 +119,7 @@ class WorkerAgent:
             task_title=self.task.title,
             success=success,
             output="\n".join(self.output),
+            error=error,
             model_used=model_used,
             started_at=self.started_at,
             completed_at=self.completed_at,
@@ -200,7 +203,8 @@ class WorkerAgent:
                 continue
             
             # 确定完整路径
-            full_path = Path(work_dir) / block.file_path if work_dir else Path(block.file_path)
+            base_dir = Path(work_dir) if work_dir else Path.cwd()
+            full_path = resolve_output_path(base_dir, block.file_path)
             
             # 创建目录
             full_path.parent.mkdir(parents=True, exist_ok=True)
@@ -216,7 +220,8 @@ class WorkerAgent:
             if python_blocks:
                 # 使用任务 ID 生成默认文件名
                 default_file = f"task_{self.task.id}_generated.py"
-                full_path = Path(work_dir) / default_file if work_dir else Path(default_file)
+                base_dir = Path(work_dir) if work_dir else Path.cwd()
+                full_path = resolve_output_path(base_dir, default_file)
                 full_path.parent.mkdir(parents=True, exist_ok=True)
                 
                 # 合并所有 Python 代码块
@@ -408,6 +413,23 @@ class TaskExecutionService:
         self.store = TaskStore(harness_dir)
         self.history = HistoryManager(harness_dir)
 
+    def _finalize_task_result(self, task: Task, result: ExecutionResult) -> None:
+        """根据执行结果更新任务状态并记录历史。"""
+        if result.success:
+            task.complete()
+            task.actual_effort = int(result.duration_seconds / 60)
+            self.store.update_task(task)
+            self.history.log_task_completed(
+                task, int(result.duration_seconds / 60),
+                model_used=result.model_used, success=True,
+            )
+            return
+
+        reason = result.error or "任务执行失败（未提供原因）"
+        task.block(reason)
+        self.store.update_task(task)
+        self.history.log_task_blocked(task, reason)
+
     def execute_tasks(self, task_ids: Optional[List[int]] = None) -> List[ExecutionResult]:
         """执行任务
 
@@ -453,14 +475,7 @@ class TaskExecutionService:
                     all_results.append(result)
 
                     # 根据执行结果更新任务状态
-                    if result.success:
-                        task.complete()
-                        task.actual_effort = int(result.duration_seconds / 60)
-                        self.store.update_task(task)
-                        self.history.log_task_completed(
-                            task, int(result.duration_seconds / 60),
-                            model_used=result.model_used, success=result.success
-                        )
+                    self._finalize_task_result(task, result)
         else:
             executor = ParallelExecutor(self.work_dir)
             for batch in batches:
@@ -475,15 +490,7 @@ class TaskExecutionService:
 
                 # 根据执行结果更新任务状态
                 for task, result in zip(batch, results):
-                    if result.success:
-                        task.complete()
-                        task.actual_effort = int(result.duration_seconds / 60)
-                    self.store.update_task(task)
-                    if result.success:
-                        self.history.log_task_completed(
-                            task, int(result.duration_seconds / 60),
-                            model_used=result.model_used, success=result.success
-                        )
+                    self._finalize_task_result(task, result)
 
         return all_results
 
@@ -509,14 +516,7 @@ class TaskExecutionService:
         result = executor.execute(task)
 
         # 根据执行结果更新任务状态
-        if result.success:
-            task.complete()
-            task.actual_effort = int(result.duration_seconds / 60)
-            self.store.update_task(task)
-            self.history.log_task_completed(
-                task, int(result.duration_seconds / 60),
-                model_used=result.model_used, success=result.success
-            )
+        self._finalize_task_result(task, result)
 
         return result
 
@@ -546,13 +546,6 @@ class TaskExecutionService:
 
         # 根据执行结果更新任务状态
         for task, result in zip(tasks, results):
-            if result.success:
-                task.complete()
-                task.actual_effort = int(result.duration_seconds / 60)
-                self.store.update_task(task)
-                self.history.log_task_completed(
-                    task, int(result.duration_seconds / 60),
-                    model_used=result.model_used, success=result.success
-                )
+            self._finalize_task_result(task, result)
 
         return results

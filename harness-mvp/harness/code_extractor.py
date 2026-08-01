@@ -9,6 +9,24 @@ from pathlib import Path
 from typing import List, Optional, Dict, Tuple
 
 
+def resolve_output_path(base_dir: Path, file_path: str) -> Path:
+    """解析并校验 AI 生成文件的输出路径。
+
+    输出必须位于 ``base_dir`` 内，避免模型返回绝对路径或 ``..``
+    路径遍历后覆盖工作目录以外的文件。
+    """
+    base_path = Path(base_dir).resolve()
+    requested_path = Path(file_path)
+    if requested_path.is_absolute():
+        raise ValueError("生成文件路径必须位于工作目录内")
+
+    output_path = (base_path / requested_path).resolve()
+    if not output_path.is_relative_to(base_path):
+        raise ValueError("生成文件路径不能逃逸工作目录")
+
+    return output_path
+
+
 @dataclass
 class CodeBlock:
     """代码块数据类"""
@@ -170,7 +188,7 @@ class CodeBlockExtractor:
         written = []
         
         for file_path, code in files_map.items():
-            full_path = base_dir / file_path
+            full_path = resolve_output_path(base_dir, file_path)
             
             # 检查文件是否存在
             if not overwrite and full_path.exists():

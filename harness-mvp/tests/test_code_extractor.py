@@ -203,6 +203,21 @@ new_content
         
         assert len(written) == 0
         assert existing_file.read_text() == "old_content"
+
+    def test_write_to_files_rejects_path_outside_base_directory(self, tmp_path):
+        """拒绝 AI 响应中逃逸工作目录的文件路径。"""
+        markdown = """
+```python:../outside.py
+print('unsafe')
+```
+"""
+
+        extractor = CodeBlockExtractor()
+
+        with pytest.raises(ValueError, match="工作目录"):
+            extractor.write_to_files(markdown, tmp_path)
+
+        assert not (tmp_path.parent / "outside.py").exists()
     
     def test_language_aliases(self):
         """测试语言别名"""
