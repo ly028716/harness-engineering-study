@@ -43,53 +43,53 @@
   <text x="145" y="366" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="21" font-weight="700">Open MVP Docs</text>
 
   <rect x="334" y="332" width="230" height="54" rx="27" fill="#FFF8F0" stroke="#D8C3AD"/>
-  <text x="390" y="366" fill="#1F2B33" font-family="Arial, sans-serif" font-size="21" font-weight="700">Read the Research</text>
+  <text x="449" y="366" fill="#1F2B33" font-family="Arial, sans-serif" font-size="19" font-weight="700" text-anchor="middle">Read the Research</text>
 
-  <rect x="88" y="424" width="266" height="164" rx="24" fill="url(#card)" stroke="#D8C3AD"/>
-  <rect x="112" y="448" width="112" height="28" rx="14" fill="#DBE9E2"/>
-  <text x="135" y="467" fill="#2F6C54" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1">TASK INPUT</text>
-  <text x="112" y="510" fill="#1F2B33" font-family="Georgia, 'Times New Roman', serif" font-size="30" font-weight="700">Implement login flow</text>
-  <text x="112" y="544" fill="#59656F" font-family="Arial, sans-serif" font-size="18">Priority: REQUIRED</text>
-  <text x="112" y="572" fill="#59656F" font-family="Arial, sans-serif" font-size="18">Effort: 3</text>
-  <text x="112" y="606" fill="#59656F" font-family="Arial, sans-serif" font-size="17">- Return 200 for valid credentials</text>
-  <text x="112" y="632" fill="#59656F" font-family="Arial, sans-serif" font-size="17">- Issue a signed session token</text>
+  <rect x="88" y="408" width="266" height="204" rx="24" fill="url(#card)" stroke="#D8C3AD"/>
+  <rect x="112" y="432" width="126" height="28" rx="14" fill="#DBE9E2"/>
+  <text x="175" y="451" fill="#2F6C54" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1" text-anchor="middle">TASK INPUT</text>
+  <text x="112" y="492" fill="#1F2B33" font-family="Georgia, 'Times New Roman', serif" font-size="21" font-weight="700">Implement login flow</text>
+  <text x="112" y="526" fill="#59656F" font-family="Arial, sans-serif" font-size="17">Priority: REQUIRED</text>
+  <text x="112" y="552" fill="#59656F" font-family="Arial, sans-serif" font-size="17">Effort: 3</text>
+  <text x="112" y="580" fill="#59656F" font-family="Arial, sans-serif" font-size="14">- Return 200 for valid credentials</text>
+  <text x="112" y="602" fill="#59656F" font-family="Arial, sans-serif" font-size="14">- Issue a signed session token</text>
 
-  <rect x="386" y="424" width="510" height="164" rx="24" fill="url(#card)" stroke="#D8C3AD"/>
-  <rect x="410" y="448" width="136" height="28" rx="14" fill="#DBE9E2"/>
-  <text x="430" y="467" fill="#2F6C54" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1">WORKFLOW SPINE</text>
+  <rect x="386" y="408" width="510" height="204" rx="24" fill="url(#card)" stroke="#D8C3AD"/>
+  <rect x="410" y="432" width="166" height="28" rx="14" fill="#DBE9E2"/>
+  <text x="493" y="451" fill="#2F6C54" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1" text-anchor="middle">WORKFLOW SPINE</text>
 
-  <rect x="418" y="496" width="134" height="72" rx="18" fill="#FFFFFF" fill-opacity="0.75" stroke="#D8C3AD"/>
-  <rect x="434" y="512" width="58" height="22" rx="11" fill="#EFD5C8"/>
-  <text x="447" y="527" fill="#7A3218" font-family="Arial, sans-serif" font-size="12" font-weight="700">PLAN</text>
-  <text x="434" y="551" fill="#1F2B33" font-family="Arial, sans-serif" font-size="17" font-weight="700">Structure tasks</text>
+  <rect x="410" y="492" width="120" height="84" rx="18" fill="#FFFFFF" fill-opacity="0.75" stroke="#D8C3AD"/>
+  <rect x="426" y="508" width="58" height="22" rx="11" fill="#EFD5C8"/>
+  <text x="439" y="523" fill="#7A3218" font-family="Arial, sans-serif" font-size="12" font-weight="700">PLAN</text>
+  <text x="426" y="553" fill="#1F2B33" font-family="Arial, sans-serif" font-size="14" font-weight="700">Structure tasks</text>
 
-  <text x="572" y="540" fill="#B8562F" font-family="Arial, sans-serif" font-size="34" font-weight="700">-&gt;</text>
+  <text x="542" y="542" fill="#B8562F" font-family="Arial, sans-serif" font-size="30" font-weight="700">-&gt;</text>
 
-  <rect x="618" y="496" width="134" height="72" rx="18" fill="#FFFFFF" fill-opacity="0.75" stroke="#D8C3AD"/>
-  <rect x="634" y="512" width="58" height="22" rx="11" fill="#EFD5C8"/>
-  <text x="647" y="527" fill="#7A3218" font-family="Arial, sans-serif" font-size="12" font-weight="700">WORK</text>
-  <text x="634" y="551" fill="#1F2B33" font-family="Arial, sans-serif" font-size="17" font-weight="700">Execute clearly</text>
+  <rect x="560" y="492" width="120" height="84" rx="18" fill="#FFFFFF" fill-opacity="0.75" stroke="#D8C3AD"/>
+  <rect x="576" y="508" width="58" height="22" rx="11" fill="#EFD5C8"/>
+  <text x="589" y="523" fill="#7A3218" font-family="Arial, sans-serif" font-size="12" font-weight="700">WORK</text>
+  <text x="576" y="553" fill="#1F2B33" font-family="Arial, sans-serif" font-size="14" font-weight="700">Execute clearly</text>
 
-  <text x="772" y="540" fill="#B8562F" font-family="Arial, sans-serif" font-size="34" font-weight="700">-&gt;</text>
+  <text x="692" y="542" fill="#B8562F" font-family="Arial, sans-serif" font-size="30" font-weight="700">-&gt;</text>
 
-  <rect x="818" y="496" width="134" height="72" rx="18" fill="#FFFFFF" fill-opacity="0.75" stroke="#D8C3AD"/>
-  <rect x="834" y="512" width="68" height="22" rx="11" fill="#EFD5C8"/>
-  <text x="845" y="527" fill="#7A3218" font-family="Arial, sans-serif" font-size="12" font-weight="700">REVIEW</text>
-  <text x="834" y="551" fill="#1F2B33" font-family="Arial, sans-serif" font-size="17" font-weight="700">Return verdicts</text>
+  <rect x="710" y="492" width="120" height="84" rx="18" fill="#FFFFFF" fill-opacity="0.75" stroke="#D8C3AD"/>
+  <rect x="726" y="508" width="68" height="22" rx="11" fill="#EFD5C8"/>
+  <text x="737" y="523" fill="#7A3218" font-family="Arial, sans-serif" font-size="12" font-weight="700">REVIEW</text>
+  <text x="726" y="553" fill="#1F2B33" font-family="Arial, sans-serif" font-size="14" font-weight="700">Return verdicts</text>
 
-  <rect x="928" y="424" width="248" height="164" rx="24" fill="url(#card)" stroke="#D8C3AD"/>
-  <rect x="952" y="448" width="154" height="28" rx="14" fill="#DBE9E2"/>
-  <text x="970" y="467" fill="#2F6C54" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1">EXECUTION RESULT</text>
-  <text x="952" y="514" fill="#59656F" font-family="Arial, sans-serif" font-size="16">Mode</text>
-  <text x="952" y="540" fill="#1F2B33" font-family="Georgia, 'Times New Roman', serif" font-size="28" font-weight="700">Solo</text>
-  <text x="952" y="575" fill="#59656F" font-family="Arial, sans-serif" font-size="16">Task Status</text>
-  <text x="952" y="601" fill="#1F2B33" font-family="Georgia, 'Times New Roman', serif" font-size="28" font-weight="700">DONE</text>
-  <text x="952" y="636" fill="#59656F" font-family="Arial, sans-serif" font-size="16">Verdict</text>
-  <text x="952" y="662" fill="#2F6C54" font-family="Georgia, 'Times New Roman', serif" font-size="28" font-weight="700">APPROVE</text>
+  <rect x="928" y="408" width="248" height="204" rx="24" fill="url(#card)" stroke="#D8C3AD"/>
+  <rect x="952" y="432" width="184" height="28" rx="14" fill="#DBE9E2"/>
+  <text x="1044" y="451" fill="#2F6C54" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1" text-anchor="middle">EXECUTION RESULT</text>
+  <text x="952" y="486" fill="#59656F" font-family="Arial, sans-serif" font-size="14">Mode</text>
+  <text x="952" y="510" fill="#1F2B33" font-family="Georgia, 'Times New Roman', serif" font-size="24" font-weight="700">Solo</text>
+  <text x="952" y="540" fill="#59656F" font-family="Arial, sans-serif" font-size="14">Task Status</text>
+  <text x="952" y="564" fill="#1F2B33" font-family="Georgia, 'Times New Roman', serif" font-size="24" font-weight="700">DONE</text>
+  <text x="952" y="580" fill="#59656F" font-family="Arial, sans-serif" font-size="14">Verdict</text>
+  <text x="952" y="604" fill="#2F6C54" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="700">APPROVE</text>
 
-  <rect x="88" y="612" width="1088" height="38" rx="19" fill="url(#terminal)"/>
-  <text x="110" y="637" fill="#F1D4C4" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="1">CLI EVIDENCE</text>
-  <text x="240" y="637" fill="#F3EDE5" font-family="Consolas, 'Courier New', monospace" font-size="14">harness plan add --title "Implement login flow" --priority REQUIRED</text>
-  <text x="754" y="637" fill="#F3EDE5" font-family="Consolas, 'Courier New', monospace" font-size="14">harness work solo 1</text>
-  <text x="936" y="637" fill="#F3EDE5" font-family="Consolas, 'Courier New', monospace" font-size="14">harness review code src/auth.py</text>
+  <rect x="88" y="632" width="1088" height="28" rx="14" fill="url(#terminal)"/>
+  <text x="106" y="651" fill="#F1D4C4" font-family="Arial, sans-serif" font-size="10" font-weight="700" letter-spacing="0.8">CLI EVIDENCE</text>
+  <text x="218" y="651" fill="#F3EDE5" font-family="Consolas, 'Courier New', monospace" font-size="11">harness plan add --title "Implement login flow" --priority REQUIRED</text>
+  <text x="686" y="651" fill="#F3EDE5" font-family="Consolas, 'Courier New', monospace" font-size="11">harness work solo 1</text>
+  <text x="840" y="651" fill="#F3EDE5" font-family="Consolas, 'Courier New', monospace" font-size="11">harness review code src/auth.py</text>
 </svg>
