@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Social Preview Render</title>
+  <style>
+    html, body {
+      margin: 0;
+      width: 1280px;
+      height: 640px;
+      overflow: hidden;
+      background: #efe3d2;
+    }
+
+    svg {
+      display: block;
+      width: 1280px;
+      height: 640px;
+    }
+  </style>
+</head>
+<body>
+  <svg width="1280" height="640" viewBox="0 0 1280 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bg" x1="84" y1="48" x2="1180" y2="620" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#F9F4EB"/>
+        <stop offset="1" stop-color="#EFE3D2"/>
+      </linearGradient>
+      <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+        <stop stop-color="#FFFCF7"/>
+        <stop offset="1" stop-color="#FFF8EF"/>
+      </linearGradient>
+      <filter id="shadow" x="-40" y="-40" width="1360" height="720" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+        <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#5A3B24" flood-opacity="0.14"/>
+      </filter>
+    </defs>
+
+    <rect width="1280" height="640" rx="28" fill="url(#bg)"/>
+    <circle cx="182" cy="116" r="148" fill="#B8562F" fill-opacity="0.12"/>
+    <circle cx="1108" cy="98" r="138" fill="#2F6C54" fill-opacity="0.10"/>
+
+    <g filter="url(#shadow)">
+      <rect x="54" y="50" width="1172" height="540" rx="32" fill="#FFFBF4" fill-opacity="0.92" stroke="#D7C1A6"/>
+    </g>
+
+    <rect x="88" y="84" width="252" height="36" rx="18" fill="#EAD1C3"/>
+    <text x="112" y="107" fill="#7A3218" font-family="Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="1.4">GITHUB SOCIAL PREVIEW</text>
+
+    <text x="88" y="168" fill="#1E2A31" font-family="Georgia, 'Times New Roman', serif" font-size="52" font-weight="700">
+      <tspan x="88" dy="0">Harness Engineering</tspan>
+      <tspan x="88" dy="58">Study Repository</tspan>
+    </text>
+
+    <text x="88" y="270" fill="#52616B" font-family="Georgia, 'Times New Roman', serif" font-size="26">
+      <tspan x="88" dy="0">Research notes + runnable Python MVP</tspan>
+    </text>
+
+    <rect x="88" y="302" width="246" height="52" rx="26" fill="#B8562F"/>
+    <text x="122" y="335" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="18" font-weight="700">Plan -&gt; Work -&gt; Review</text>
+
+    <text x="88" y="406" fill="#1E2A31" font-family="Arial, sans-serif" font-size="20" font-weight="700">Why this repo gets attention</text>
+    <text x="88" y="442" fill="#5D6970" font-family="Arial, sans-serif" font-size="17">- research-backed comparisons across real harness approaches</text>
+    <text x="88" y="474" fill="#5D6970" font-family="Arial, sans-serif" font-size="17">- a small inspectable implementation instead of a black-box demo</text>
+    <text x="88" y="506" fill="#5D6970" font-family="Arial, sans-serif" font-size="17">- English discovery layer with deeper Chinese learning material</text>
+
+    <rect x="760" y="156" width="392" height="280" rx="26" fill="url(#panel)" stroke="#D7C1A6"/>
+    <rect x="786" y="184" width="118" height="28" rx="14" fill="#DCE9E2"/>
+    <text x="810" y="202" fill="#2F6C54" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1.2">SHOWCASE LOOP</text>
+
+    <rect x="788" y="238" width="92" height="74" rx="18" fill="#FFFFFF" stroke="#D7C1A6"/>
+    <text x="812" y="266" fill="#7A3218" font-family="Arial, sans-serif" font-size="13" font-weight="700">PLAN</text>
+    <text x="806" y="291" fill="#1E2A31" font-family="Arial, sans-serif" font-size="15" font-weight="700">Task</text>
+    <text x="806" y="313" fill="#5D6970" font-family="Arial, sans-serif" font-size="13">scope first</text>
+
+    <text x="900" y="286" fill="#B8562F" font-family="Arial, sans-serif" font-size="30" font-weight="700">-&gt;</text>
+
+    <rect x="944" y="238" width="92" height="74" rx="18" fill="#FFFFFF" stroke="#D7C1A6"/>
+    <text x="969" y="266" fill="#7A3218" font-family="Arial, sans-serif" font-size="13" font-weight="700">WORK</text>
+    <text x="963" y="291" fill="#1E2A31" font-family="Arial, sans-serif" font-size="15" font-weight="700">Visible</text>
+    <text x="961" y="313" fill="#5D6970" font-family="Arial, sans-serif" font-size="13">execution</text>
+
+    <text x="1054" y="286" fill="#B8562F" font-family="Arial, sans-serif" font-size="30" font-weight="700">-&gt;</text>
+
+    <rect x="1092" y="238" width="84" height="74" rx="18" fill="#FFFFFF" stroke="#D7C1A6"/>
+    <text x="1108" y="266" fill="#7A3218" font-family="Arial, sans-serif" font-size="13" font-weight="700">REVIEW</text>
+    <text x="1108" y="291" fill="#1E2A31" font-family="Arial, sans-serif" font-size="15" font-weight="700">Verdict</text>
+    <text x="1110" y="313" fill="#5D6970" font-family="Arial, sans-serif" font-size="13">outcomes</text>
+
+    <rect x="788" y="344" width="356" height="60" rx="18" fill="#1F1A16"/>
+    <text x="812" y="367" fill="#E7C4B0" font-family="Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="1.2">CLI SIGNAL</text>
+    <text x="812" y="391" fill="#FFF9F1" font-family="Consolas, 'Courier New', monospace" font-size="13">harness work solo 1</text>
+
+    <text x="88" y="554" fill="#7C6455" font-family="Arial, sans-serif" font-size="16">github.com/ly028716/harness-engineering-study</text>
+  </svg>
+</body>
+</html>
